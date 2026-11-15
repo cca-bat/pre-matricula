@@ -1,0 +1,1327 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<!-- A página não carrega nada de fora: só conversa com a ponte da planilha (e com localhost, nos testes). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https: http://localhost:* http://127.0.0.1:*; img-src data:; base-uri 'none'; form-action 'none'">
+<title>Pré-matrícula</title>
+<!--
+  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 1 (para o controle_base.gs versão 4 ou mais nova)
+
+  Página única, sem bibliotecas e sem dados: nomes, regras e situações vêm da planilha, pela ponte
+  (o App da Web do controle_base.gs). Pode ser aberta com dois cliques ou hospedada num link.
+
+  O endereço da ponte não fica aqui. Ele chega de um de dois jeitos:
+    - no link enviado à equipe, depois do "#":   .../#p=CÓDIGO_DA_IMPLANTAÇÃO  (ou o endereço inteiro, que termina em /exec)
+    - colado uma vez na tela de entrada.
+  O aparelho guarda o endereço da ponte, o código da equipe e o nome de quem atende. Dados de
+  candidatos nunca são guardados no aparelho: ficam só na memória, enquanto a página está aberta.
+-->
+<style>
+  :root {
+    --mesa: #edf0ec; --papel: #ffffff; --tinta: #17231c; --suave: #55635b; --linha: #d5dbd4; --linha-forte: #aeb9ad;
+    --topo: #163d29; --verde: #1f7a3d; --verde-fundo: #e3f2e6; --ocre: #8f5407; --ocre-fundo: #fff0d2;
+    --vermelho: #b3261e; --vermelho-fundo: #fbe5e2; --ardosia: #55626b; --ardosia-fundo: #e9edef;
+    --roxo: #5d4a82; --roxo-fundo: #ece7f5; --foco: #0b57d0; --selecao: #f1f6f0;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--mesa); color: var(--tinta);
+    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    display: flex; flex-direction: column; height: 100vh; height: 100dvh;
+  }
+  button, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+
+  /* ---------- topo */
+  .cabeca { flex: none; }
+  .topo { background: var(--topo); color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; position: relative; flex: none; }
+  .marca { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+  .marca strong { font-size: 17px; font-weight: 650; white-space: nowrap; }
+  .marca span { font-size: 13px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topo-direita { display: flex; align-items: center; gap: 10px; flex: none; }
+  .rede { font-size: 13px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .rede::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #7fd89a; }
+  .rede.salvando::before { background: #ffd37a; }
+  .rede.erro::before { background: #ff8a80; }
+  .rede.parada::before { background: #c9d1cb; }
+  .rede:empty { display: none; }
+  .quem { background: transparent; border: 1px solid rgba(255,255,255,.45); color: #fff; border-radius: 4px; padding: 5px 10px; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .menu { position: absolute; right: 12px; top: calc(100% + 4px); background: var(--papel); color: var(--tinta); border: 1px solid var(--linha-forte); border-radius: 4px; box-shadow: 0 6px 18px rgba(23,35,28,.18); z-index: 40; min-width: 230px; padding: 4px; }
+  .menu button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 10px 12px; border-radius: 3px; }
+
+  .versoes { margin: 4px 12px 6px; padding-top: 6px; border-top: 1px solid var(--linha); font-size: 12px; color: var(--suave); }
+  .faixa { background: var(--vermelho); color: #fff; padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: none; font-weight: 600; }
+  .faixa.branda { background: var(--ocre); }
+  .faixa button { background: #fff; color: var(--tinta); border: 0; border-radius: 4px; padding: 6px 12px; font-weight: 600; flex: none; }
+
+  /* ---------- lista */
+  .corpo { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(330px, 430px) minmax(0, 1fr); }
+  .painel-lista { background: var(--papel); border-right: 1px solid var(--linha-forte); display: flex; flex-direction: column; min-height: 0; }
+  .filtros { padding: 12px 14px 8px; border-bottom: 1px solid var(--linha); flex: none; }
+  #busca { -webkit-appearance: none; appearance: none; width: 100%; padding: 10px 12px; border: 1.5px solid var(--linha-forte); border-radius: 4px; background: #fff; font-size: 16px; }
+  .abas { display: flex; gap: 6px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
+  .abas::-webkit-scrollbar, .contadores::-webkit-scrollbar { display: none; }
+  .aba { flex: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: 6px 4px 5px; margin-right: 8px; color: var(--suave); font-weight: 600; white-space: nowrap; }
+  .aba[aria-selected="true"] { color: var(--tinta); border-bottom-color: var(--verde); }
+  .aba small { font-weight: 400; font-size: 13px; }
+  .contadores { display: flex; gap: 6px; margin-top: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .conta { flex: none; border: 1.5px solid var(--cor); color: var(--cor); background: var(--fundo); border-radius: 3px; padding: 4px 9px; font-size: 13px; white-space: nowrap; }
+  .conta b { font-weight: 700; margin-left: 5px; font-variant-numeric: tabular-nums; }
+  .conta[aria-pressed="true"] { background: var(--cor); color: #fff; }
+  .conta.fora { --cor: var(--tinta); --fundo: #fff; border-style: dashed; }
+  .lista { overflow: auto; flex: 1; min-height: 0; }
+  .grupo-curso { margin: 0; padding: 14px 14px 6px; font-size: 16px; font-weight: 650; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .grupo-curso small { font-weight: 400; font-size: 13px; color: var(--suave); }
+  .grupo-cota { margin: 0; padding: 8px 14px 5px; font-size: 13px; font-weight: 600; color: var(--suave); background: #f6f8f5; border-top: 1px solid var(--linha); border-bottom: 1px solid var(--linha); }
+  .pessoa { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--linha); border-left: 4px solid transparent; padding: 9px 12px 9px 10px; min-height: 54px; }
+  .pessoa[aria-current="true"] { background: var(--selecao); border-left-color: var(--verde); }
+  .pessoa .pos { color: var(--suave); font-variant-numeric: tabular-nums; font-size: 14px; }
+  .pessoa .nome { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pessoa .meta { display: block; font-size: 13px; color: var(--suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pessoa .meta em { font-style: normal; color: var(--ocre); }
+  .vazio { padding: 28px 18px; color: var(--suave); }
+
+  /* ---------- carimbo da situação */
+  .selo { display: inline-block; border: 1.5px solid var(--cor); color: var(--cor); background: var(--fundo); border-radius: 3px; padding: 2px 8px; font-size: 13px; font-weight: 650; white-space: nowrap; }
+  .sit-aguardando { --cor: var(--ardosia); --fundo: var(--ardosia-fundo); }
+  .sit-pendencia { --cor: var(--ocre); --fundo: var(--ocre-fundo); }
+  .sit-concluida { --cor: var(--verde); --fundo: var(--verde-fundo); }
+  .sit-indeferida { --cor: var(--vermelho); --fundo: var(--vermelho-fundo); }
+  .sit-ausente, .sit-outra { --cor: var(--roxo); --fundo: var(--roxo-fundo); }
+  .sit-sem { --cor: var(--linha-forte); --fundo: #fff; }
+  .sit-sem.selo { color: var(--suave); border-style: dashed; }
+
+  /* ---------- ficha */
+  .painel-ficha { overflow: auto; padding: 0 20px; min-height: 0; }
+  .ficha-vazia { color: var(--suave); max-width: 420px; margin: 12vh auto 0; text-align: center; }
+  .barra-ficha { display: none; }
+  .folha { background: var(--papel); border: 1px solid var(--linha-forte); border-top: 7px solid var(--cor, var(--ardosia)); max-width: 800px; margin: 20px auto 24px; }
+  .folha-cab { padding: 14px 20px 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px 16px; background: var(--papel); box-shadow: 0 1px 0 var(--linha); }
+  .folha-cab h2 { margin: 0; font-size: 22px; font-weight: 650; line-height: 1.2; overflow-wrap: anywhere; }
+  .folha-cab .selo { font-size: 15px; padding: 4px 12px; flex: none; }
+  .dados { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; gap: 2px 28px; margin: 0; padding: 12px 20px 14px; border-bottom: 1px solid var(--linha); }
+  .dados div { min-width: 0; }
+  .dados dt { font-size: 12px; color: var(--suave); }
+  .dados dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .dados dd small { font-weight: 400; color: var(--suave); font-size: 13px; }
+  .alerta { margin: 0; padding: 10px 20px; border-bottom: 1px solid var(--linha); background: var(--fundo); color: var(--cor); font-weight: 600; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .alerta span { font-weight: 400; color: var(--tinta); }
+  .alerta.atencao { --cor: var(--ocre); --fundo: var(--ocre-fundo); }
+  .bloco { padding: 14px 20px 16px; border-bottom: 1px solid var(--linha); }
+  .bloco:last-child { border-bottom: 0; }
+  .bloco-titulo { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .bloco h3 { margin: 0; font-size: 15px; font-weight: 650; }
+  .acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+  .botao { background: #fff; border: 1.5px solid var(--linha-forte); border-radius: 4px; padding: 8px 14px; font-weight: 600; min-height: 40px; }
+  .botao.principal { background: var(--verde); border-color: var(--verde); color: #fff; }
+  .botao.perigo { color: var(--vermelho); }
+  .botao.pequeno { padding: 5px 10px; min-height: 34px; font-size: 14px; }
+  .botao[aria-pressed="true"] { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+
+  /* checklist: uma linha por documento, como na tira de papel */
+  .docs { margin: 0; padding: 0; list-style: none; }
+  .docs > li { border-bottom: 1px dashed var(--linha-forte); }
+  .docs > li:last-child { border-bottom: 0; }
+  .doc-linha { display: flex; align-items: stretch; gap: 8px; }
+  .doc { flex: 1; min-width: 0; display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 6px 10px 4px; min-height: 48px; cursor: pointer; border-radius: 3px; }
+  .doc input { appearance: none; -webkit-appearance: none; width: 24px; height: 24px; margin: 0; border: 2px solid var(--tinta); border-radius: 3px; background: #fff; cursor: pointer; display: grid; place-content: center; }
+  .doc input::after { content: ""; width: 12px; height: 6px; border: solid #fff; border-width: 0 0 3px 3px; transform: translateY(-2px) rotate(-45deg) scale(0); }
+  .doc input:checked { background: var(--verde); border-color: var(--verde); }
+  .doc input:checked::after { transform: translateY(-2px) rotate(-45deg) scale(1); }
+  .doc-nome { overflow-wrap: anywhere; }
+  .doc-nota { display: block; font-size: 13px; color: var(--suave); }
+  .doc.marcado .doc-nome { font-weight: 600; }
+  .doc.dispensado input:not(:checked) { border-color: var(--linha-forte); background: #f1f3f0; }
+  .doc.dispensado:not(.marcado) .doc-nome { color: var(--suave); }
+  .doc.depois .doc-nota { color: var(--ocre); }
+  li.no-grupo { margin-left: 14px; padding-left: 8px; border-left: 3px solid var(--linha); }
+  li.rotulo-grupo { padding: 10px 4px 4px; font-size: 13px; color: var(--suave); border-bottom: 0; }
+  li.alternativa { margin-left: 34px; }
+  li.alternativa .doc { min-height: 42px; padding-top: 7px; padding-bottom: 7px; font-size: 14px; }
+  li.alternativa .doc input { width: 20px; height: 20px; }
+  .nao-atende { align-self: center; flex: none; }
+
+  .resumo { margin: 0; padding: 0; list-style: none; }
+  .resumo li { padding: 3px 0 3px 14px; position: relative; }
+  .resumo li::before { content: ""; position: absolute; left: 0; top: .72em; width: 6px; height: 6px; background: var(--cor); border-radius: 50%; }
+  .resumo-titulo { margin: 0 0 2px; font-weight: 650; color: var(--cor); }
+  .resumo-titulo small { font-weight: 400; color: var(--suave); font-size: 13px; }
+  .falta { --cor: var(--ocre); }
+  .depois-lista { --cor: var(--ardosia); margin-top: 10px; }
+  .tudo-certo { color: var(--verde); font-weight: 600; margin: 0; }
+
+  .motivos { margin-top: 12px; padding: 12px; background: #f6f8f5; border: 1px solid var(--linha); border-radius: 4px; }
+  .motivos p { margin: 0 0 8px; font-size: 14px; }
+  .motivos .acoes { flex-direction: column; align-items: stretch; }
+  .motivos .acoes .botao { text-align: left; font-weight: 400; }
+  .outro { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .outro input { flex: 1; min-width: 180px; }
+  .campo { display: block; margin-top: 12px; }
+  .campo:first-of-type { margin-top: 0; }
+  .dupla { margin-top: 12px; }
+  .dupla .campo { margin-top: 0; }
+  .campo span { display: block; font-size: 13px; color: var(--suave); margin-bottom: 3px; }
+  input[type="text"], input[type="tel"], input[type="email"], input[type="password"], input[type="url"], textarea { width: 100%; padding: 9px 11px; border: 1.5px solid var(--linha-forte); border-radius: 4px; background: #fff; font-size: 16px; }
+  textarea { min-height: 76px; resize: vertical; }
+  .dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rodape { padding: 10px 20px; font-size: 13px; color: var(--suave); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .gravacao.erro { color: var(--vermelho); font-weight: 600; }
+
+  /* ---------- entrada */
+  .entrada { position: fixed; inset: 0; background: var(--mesa); z-index: 60; overflow: auto; padding: 24px 16px; }
+  .entrada form { background: var(--papel); border: 1px solid var(--linha-forte); border-top: 7px solid var(--verde); max-width: 440px; margin: 6vh auto 0; padding: 22px 22px 24px; }
+  .entrada h1 { margin: 0 0 4px; font-size: 22px; font-weight: 650; }
+  .entrada p { margin: 0 0 14px; color: var(--suave); }
+  .entrada .campo small { display: block; font-size: 13px; color: var(--suave); margin-top: 3px; }
+  .entrada .erro { color: var(--vermelho); font-weight: 600; margin: 14px 0 0; }
+  .entrada .acoes { margin-top: 18px; }
+
+  /* ---------- avisos */
+  .avisos { position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 70; display: flex; flex-direction: column; gap: 8px; width: min(560px, calc(100vw - 24px)); pointer-events: none; }
+  .aviso { pointer-events: auto; background: var(--tinta); color: #fff; border-radius: 4px; padding: 10px 12px 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 6px 18px rgba(23,35,28,.28); }
+  .aviso button { background: none; border: 1px solid rgba(255,255,255,.6); color: #fff; border-radius: 4px; padding: 5px 10px; font-weight: 600; flex: none; }
+  .copia { display: flex; gap: 8px; width: 100%; }
+  .copia input { flex: 1; min-width: 0; background: #fff; color: var(--tinta); font-size: 14px; padding: 6px 8px; }
+
+  /* ---------- celular e janelas estreitas: a lista ocupa a tela e a ficha abre por cima */
+  @media (max-width: 899px) {
+    body { display: block; height: auto; min-height: 100vh; }
+    .cabeca { position: sticky; top: 0; z-index: 30; }
+    .marca span { display: none; }
+    .corpo { display: block; }
+    .painel-lista { border-right: 0; display: block; }
+    .filtros { position: sticky; top: var(--cabeca, 46px); z-index: 10; background: var(--papel); }
+    .lista { overflow: visible; }
+    .painel-ficha { position: fixed; inset: 0; z-index: 50; background: var(--mesa); padding: 0 0 24px; display: none; }
+    body.com-ficha .painel-ficha { display: block; }
+    body.com-ficha { overflow: hidden; }
+    .barra-ficha { display: flex; position: sticky; top: 0; z-index: 2; background: var(--topo); color: #fff; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; border-bottom: 7px solid var(--cor, var(--ardosia)); }
+    .barra-ficha button { background: none; border: 0; color: #fff; padding: 8px 8px; font-weight: 600; flex: none; }
+    .barra-ficha span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+    .barra-ficha .falhou { background: var(--vermelho); border-radius: 4px; }
+    .folha { border-left: 0; border-right: 0; margin: 0; }
+    .folha-cab, .dados, .bloco, .alerta, .rodape { padding-left: 14px; padding-right: 14px; }
+    .folha-cab { flex-direction: column; gap: 8px; }
+    .folha-cab h2 { font-size: 20px; }
+    .dados { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
+    .folha { border-top: 0; }
+    .dupla { grid-template-columns: 1fr; }
+    .ficha-vazia { display: none; }
+  }
+  /* realce ao passar o mouse: só onde há mouse, para não ficar "preso" depois de um toque no celular */
+  @media (hover: hover) {
+    .quem:hover { background: rgba(255,255,255,.12); }
+    .menu button:hover { background: var(--selecao); }
+    .pessoa:hover, .doc:hover { background: #f8faf7; }
+    .pessoa[aria-current="true"]:hover { background: var(--selecao); }
+    .botao:hover { border-color: var(--tinta); }
+    .botao.principal:hover { background: #18642f; border-color: #18642f; }
+    .botao.perigo:hover { border-color: var(--vermelho); }
+    .botao[aria-pressed="true"]:hover { border-color: var(--tinta); }
+  }
+  /* no computador, filtros em mais de uma linha, para nenhum ficar escondido */
+  @media (min-width: 900px) {
+    .abas, .contadores { flex-wrap: wrap; overflow: visible; }
+    .folha-cab { position: sticky; top: 0; z-index: 1; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .doc input::after { transition: transform .12s ease-out; }
+  }
+</style>
+</head>
+<body>
+
+<div id="cabeca" class="cabeca">
+<header class="topo">
+  <div class="marca"><strong>Pré-matrícula</strong><span id="subtitulo"></span></div>
+  <div class="topo-direita">
+    <span id="rede" class="rede parada" role="status" aria-live="polite"></span>
+    <button id="botao-quem" class="quem" type="button" aria-haspopup="true" aria-expanded="false" hidden></button>
+  </div>
+  <div id="menu" class="menu" hidden>
+    <button type="button" data-acao="atualizar">Atualizar agora</button>
+    <button type="button" data-acao="trocar">Trocar nome ou código</button>
+    <button type="button" data-acao="link">Copiar link para a equipe</button>
+    <button type="button" data-acao="sair">Sair deste aparelho</button>
+    <p id="versoes" class="versoes"></p>
+  </div>
+</header>
+
+<div id="faixa" class="faixa" hidden>
+  <span id="faixa-texto"></span>
+  <button id="faixa-botao" type="button">Tentar agora</button>
+</div>
+</div>
+
+<main id="app" class="corpo" hidden>
+  <section class="painel-lista" aria-label="Candidatos">
+    <div class="filtros">
+      <input id="busca" type="search" placeholder="Buscar por nome ou inscrição" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Buscar por nome ou inscrição">
+      <div id="cursos" class="abas" role="tablist" aria-label="Curso"></div>
+      <div id="contadores" class="contadores" aria-label="Situação"></div>
+    </div>
+    <div id="lista" class="lista"></div>
+  </section>
+  <section id="ficha" class="painel-ficha" aria-label="Ficha da pessoa"></section>
+</main>
+
+<div id="entrada" class="entrada" hidden>
+  <form id="form-entrada" autocomplete="off" novalidate>
+    <h1>Pré-matrícula</h1>
+    <p id="entrada-texto">Para começar neste aparelho:</p>
+    <label class="campo" id="campo-ponte">
+      <span>Endereço da ponte</span>
+      <input id="in-ponte" type="url" inputmode="url" autocapitalize="off" spellcheck="false">
+      <small>É o endereço do App da Web da planilha, que termina em /exec. Se você recebeu um link pronto, abra por ele.</small>
+    </label>
+    <label class="campo">
+      <span>Código da equipe</span>
+      <input id="in-codigo" type="password" autocapitalize="off" spellcheck="false">
+    </label>
+    <label class="campo">
+      <span>Seu nome</span>
+      <input id="in-nome" type="text" maxlength="60" autocapitalize="words">
+      <small>Aparece na planilha, ao lado do que você gravar.</small>
+    </label>
+    <p id="entrada-erro" class="erro" role="alert" hidden></p>
+    <div class="acoes">
+      <button id="botao-entrar" class="botao principal" type="submit">Entrar</button>
+      <button id="botao-cancelar" class="botao" type="button" hidden>Cancelar</button>
+      <button id="botao-outra" class="botao" type="button" hidden>Usar outra planilha</button>
+    </div>
+  </form>
+</div>
+
+<div id="avisos" class="avisos" aria-live="polite"></div>
+<noscript><p style="padding:24px">Esta página precisa de JavaScript para funcionar.</p></noscript>
+
+<script>
+(function () {
+'use strict';
+
+/* ====================================================================== */
+/* 1. Regras (as mesmas contas do controle_base.gs, para a tela responder  */
+/*    na hora; a resposta da planilha sempre substitui o que foi estimado) */
+/* ====================================================================== */
+/*LOGICA-INICIO*/
+const Logica = (function () {
+  /** Texto sem acentos, em minúsculas e com "_" no lugar de espaços (igual a chave_ da planilha). */
+  function chave(v) {
+    return String(v === null || v === undefined ? '' : v).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_');
+  }
+  /** Para a busca: sem acentos, em minúsculas, com espaços simples. */
+  function semAcento(v) {
+    return String(v === null || v === undefined ? '' : v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+  }
+  /** "aguardando", "pendencia" e "concluida" são calculadas; qualquer outra preenchida é "fixa" (só muda à mão). */
+  function tipoSituacao(v) {
+    const k = chave(v);
+    if (k === '') return '';
+    if (k.indexOf('aguardando') === 0) return 'aguardando';
+    if (k.indexOf('pendencia') === 0) return 'pendencia';
+    if (k.indexOf('concluid') === 0) return 'concluida';
+    return 'fixa';
+  }
+  /** Classe de cor do carimbo. */
+  function classeDaSituacao(v) {
+    const tipo = tipoSituacao(v);
+    if (tipo === '') return 'sit-sem';
+    if (tipo !== 'fixa') return 'sit-' + tipo;
+    const k = chave(v);
+    if (k.indexOf('indeferid') === 0) return 'sit-indeferida';
+    if (k.indexOf('nao_compareceu') === 0) return 'sit-ausente';
+    return 'sit-outra';
+  }
+  /** Regras que valem para a pessoa: as que têm caixa nos documentos dela, na ordem da aba Regras. */
+  function regrasDe(cfg, docs) {
+    return cfg.regras.filter(function (r) { return Object.prototype.hasOwnProperty.call(docs, r.codigo); });
+  }
+  function marcados(docs) {
+    const m = {};
+    Object.keys(docs).forEach(function (c) { if (docs[c]) m[c] = true; });
+    return m;
+  }
+  /** Cópia fiel de calcularPendencias_ (controle_base.gs). */
+  function calcular(valem, marcado) {
+    const cobre = {}, grupos = {}, porCodigo = {};
+    const cod = function (c) { return String(c).trim().toUpperCase(); };
+    valem.forEach(function (r) {
+      porCodigo[cod(r.codigo)] = r;
+      if (marcado[r.codigo]) r.cobre.forEach(function (c) { cobre[c] = true; });
+      if (r.grupo) {
+        const g = grupos[r.grupo] = grupos[r.grupo] || { membros: [], quitado: false };
+        g.membros.push(r);
+        if (marcado[r.codigo]) g.quitado = true;
+      }
+    });
+    const coberto = function (r) { return cobre[cod(r.codigo)] === true; };
+    const pendencias = [], depois = [], dispensados = {}, cobertos = {}, vistos = {};
+    valem.forEach(function (r) {
+      if (marcado[r.codigo]) return;
+      if (r.cobre.length) {
+        const definitivos = r.cobre.map(function (c) { return porCodigo[c]; }).filter(function (d) { return d; });
+        if (definitivos.length && definitivos.every(function (d) { return marcado[d.codigo]; })) dispensados[r.codigo] = true;
+      }
+      if (r.grupo) {
+        const g = grupos[r.grupo];
+        if (g.quitado) { dispensados[r.codigo] = true; return; }
+        if (g.membros.some(coberto)) { dispensados[r.codigo] = true; cobertos[r.codigo] = true; }
+        if (vistos[r.grupo]) return;
+        vistos[r.grupo] = true;
+        if (!g.membros.some(function (x) { return x.conta; })) return;
+        const texto = g.membros.length > 1 ? r.grupo + ' (' + g.membros.map(function (x) { return x.documento; }).join(' ou ') + ')' : r.documento;
+        (g.membros.some(coberto) ? depois : pendencias).push(texto);
+        return;
+      }
+      if (coberto(r)) { dispensados[r.codigo] = true; cobertos[r.codigo] = true; }
+      if (!r.conta) return;
+      (coberto(r) ? depois : pendencias).push(r.documento);
+    });
+    return { pendencias: pendencias, depois: depois, dispensados: dispensados, cobertos: cobertos };
+  }
+  /** "Marcar todos": os documentos comuns ainda não marcados, menos o que um provisório marcado já cobre. */
+  function comunsAMarcar(cfg, docs) {
+    const valem = regrasDe(cfg, docs), marcado = marcados(docs);
+    const cobertos = calcular(valem, marcado).cobertos;
+    const novos = {};
+    valem.forEach(function (r) { if (r.marcarTodos && !marcado[r.codigo] && !cobertos[r.codigo]) novos[r.codigo] = true; });
+    return novos;
+  }
+  /**
+   * A pessoa como a tela mostra: o que veio da planilha (c) mais o que ainda não foi confirmado (ov = { docs, campos }).
+   * Sem "ov", vale o que a planilha disse. Com "ov", situação e pendências são estimadas com as mesmas regras.
+   */
+  function ver(cfg, c, ov) {
+    const v = {};
+    Object.keys(c).forEach(function (k) { v[k] = c[k]; });
+    v.docs = {};
+    Object.keys(c.docs).forEach(function (k) { v.docs[k] = c.docs[k] ? 1 : 0; });
+    v.local = false;
+    if (ov) {
+      const campos = ov.campos || {};
+      Object.keys(ov.docs || {}).forEach(function (k) { if (k in v.docs) v.docs[k] = ov.docs[k] ? 1 : 0; });
+      ['obs', 'tel', 'email', 'hetero', 'motivo'].forEach(function (k) { if (k in campos) v[k] = campos[k]; });
+      let situacao = v.situacao;
+      if ('situacao' in campos) {
+        situacao = campos.situacao;
+        const escolhida = tipoSituacao(situacao);
+        if (escolhida === 'concluida') Object.keys(comunsAMarcar(cfg, v.docs)).forEach(function (k) { v.docs[k] = 1; });
+        if (escolhida !== 'fixa' && !('motivo' in campos)) v.motivo = '';                        // desfazer o indeferimento
+      }
+      if ('motivo' in campos && v.banca && chave(campos.motivo).indexOf('heteroidentificacao') >= 0) {
+        const indeferida = cfg.hetero.filter(function (h) { return chave(h).indexOf('indeferid') >= 0; })[0];
+        if (indeferida) v.hetero = indeferida;
+      }
+      const marcado = marcados(v.docs);
+      const res = calcular(regrasDe(cfg, v.docs), marcado);
+      const algum = Object.keys(marcado).length > 0;
+      const tipo = tipoSituacao(situacao);
+      if (tipo !== 'fixa') {
+        if (String(v.motivo || '').trim() !== '') situacao = cfg.nomes.indeferida;
+        else if (tipo === '' && !algum && v.lista !== cfg.aprovado) situacao = '';
+        else situacao = !algum ? cfg.nomes.aguardando : (res.pendencias.length ? cfg.nomes.pendencia : cfg.nomes.concluida);
+      }
+      const atendido = algum && tipoSituacao(situacao) !== 'fixa';
+      v.situacao = situacao;
+      v.pend = atendido ? res.pendencias.join('; ') : '';
+      v.depois = atendido ? res.depois.join('; ') : '';
+      v.local = true;
+    }
+    const cinza = calcular(regrasDe(cfg, v.docs), marcados(v.docs));
+    v.dispensados = cinza.dispensados;
+    v.cobertos = cinza.cobertos;
+    return v;
+  }
+  /** Aceita o endereço inteiro da ponte (termina em /exec) ou só o código da implantação. Devolve "" se não servir. */
+  function normalizarPonte(texto) {
+    const t = String(texto || '').trim();
+    let m = t.match(/^https:\/\/script\.google\.com\/(?:a\/macros\/[^\/]+\/|macros\/)s\/([\w-]+)\/exec/);
+    if (m) return 'https://script.google.com/macros/s/' + m[1] + '/exec';
+    if (/^[\w-]{25,}$/.test(t)) return 'https://script.google.com/macros/s/' + t + '/exec';
+    if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/[\w\/.-]*$/.test(t)) return t;               // testes no próprio computador
+    return '';
+  }
+  return { chave: chave, semAcento: semAcento, tipoSituacao: tipoSituacao, classeDaSituacao: classeDaSituacao, regrasDe: regrasDe,
+    marcados: marcados, calcular: calcular, comunsAMarcar: comunsAMarcar, ver: ver, normalizarPonte: normalizarPonte };
+})();
+/*LOGICA-FIM*/
+
+/* ====================================================================== */
+/* 2. Estado                                                              */
+/* ====================================================================== */
+const INTERVALO = 12000;          // de quanto em quanto tempo a tela pergunta à planilha o que mudou
+const ATRASO_CLIQUE = 350;        // junta cliques seguidos na mesma pessoa numa gravação só
+const ATRASO_TEXTO = 1500;        // espera a pessoa parar de digitar
+const LIMITE = 30000;             // desiste de um pedido sem resposta
+const GUARDADO = 'prematricula:aparelho';
+const VERSAO_DA_TELA = 1;
+const ROTULO_COTA = {
+  AC: 'ampla concorrência',
+  LB_PPI: 'baixa renda, pretos, pardos e indígenas', LB_Q: 'baixa renda, quilombolas', LB_PCD: 'baixa renda, pessoas com deficiência', LB_EP: 'baixa renda, escola pública',
+  LI_PPI: 'qualquer renda, pretos, pardos e indígenas', LI_Q: 'qualquer renda, quilombolas', LI_PCD: 'qualquer renda, pessoas com deficiência', LI_EP: 'qualquer renda, escola pública'
+};
+
+const estado = {
+  ponte: '', codigo: '', nome: '',
+  config: null, candidatos: {}, rev: '',
+  fila: {},                       // inscrição -> { docs, campos, quando }: o que ainda vai ser enviado
+  enviando: {},                   // inscrição -> lote que está a caminho da planilha
+  gravadoEm: {},                  // inscrição -> hora da última gravação confirmada
+  gravando: false, falha: '', tentativas: 0, pausaAte: 0,
+  consultando: false, semResposta: 0, recado: '',
+  bloqueado: false,               // tela de entrada aberta por código recusado
+  curso: '', situacao: '', fora: false, busca: '',
+  aberto: '', painelMotivo: false
+};
+let temporizadorFila = 0, temporizadorConsulta = 0, desenhoPendente = false;
+
+const $ = function (id) { return document.getElementById(id); };
+
+/** Cria um elemento. Texto sempre entra como texto (nunca como HTML): nada do que vem da planilha é interpretado. */
+function el(tag, atr) {
+  const n = document.createElement(tag);
+  if (atr) Object.keys(atr).forEach(function (k) {
+    const v = atr[k];
+    if (v === null || v === undefined || v === false) return;
+    if (k === 'class') n.className = v;
+    else if (k === 'text') n.textContent = v;
+    else if (k === 'value') n.value = v;
+    else if (k === 'checked') n.checked = true;
+    else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v === true ? '' : v);
+  });
+  for (let i = 2; i < arguments.length; i++) acrescentar(n, arguments[i]);
+  return n;
+}
+function acrescentar(pai, filho) {
+  if (filho === null || filho === undefined || filho === false) return;
+  if (Array.isArray(filho)) filho.forEach(function (x) { acrescentar(pai, x); });
+  else pai.appendChild(typeof filho === 'string' ? document.createTextNode(filho) : filho);
+}
+function trocarFilhos(pai) {
+  while (pai.firstChild) pai.removeChild(pai.firstChild);
+  for (let i = 1; i < arguments.length; i++) acrescentar(pai, arguments[i]);
+}
+
+/* ---------- o que fica guardado no aparelho (nunca dados de candidatos) */
+function lerGuardado() {
+  try { return JSON.parse(localStorage.getItem(GUARDADO)) || {}; } catch (e) { return {}; }
+}
+function guardar() {
+  try {
+    localStorage.setItem(GUARDADO, JSON.stringify({ ponte: estado.ponte, codigo: estado.codigo, nome: estado.nome, curso: estado.curso }));
+    return true;
+  } catch (e) { return false; }
+}
+function esquecer() {
+  try { localStorage.removeItem(GUARDADO); } catch (e) { /* nada guardado */ }
+}
+
+/* ====================================================================== */
+/* 3. Conversa com a ponte                                                */
+/* ====================================================================== */
+/**
+ * POST em texto simples, sem cabeçalhos próprios e sem credenciais: assim o navegador não faz consulta
+ * prévia (preflight) e as contas Google abertas no navegador não interferem.
+ */
+function chamar(pedido) {
+  const controle = typeof AbortController === 'function' ? new AbortController() : null;
+  const relogio = controle ? setTimeout(function () { controle.abort(); }, LIMITE) : 0;
+  const corpo = { codigo: estado.codigo };
+  Object.keys(pedido).forEach(function (k) { corpo[k] = pedido[k]; });
+  return fetch(estado.ponte, { method: 'POST', credentials: 'omit', body: JSON.stringify(corpo), signal: controle ? controle.signal : undefined })
+    .then(function (r) { return r.text(); })
+    .then(function (texto) {
+      clearTimeout(relogio);
+      try { return JSON.parse(texto); } catch (e) { return { ok: false, erro: 'resposta', mensagem: 'A planilha respondeu algo que a tela não entendeu.' }; }
+    }, function () {
+      clearTimeout(relogio);
+      return { ok: false, erro: 'rede', mensagem: 'Sem conexão com a planilha.' };
+    });
+}
+
+/** Aplica uma resposta de "listar" ou de "mudancas". "inicio" é a hora em que o pedido saiu. */
+function aplicar(r, inicio) {
+  if (r.igual) return;
+  if (r.config) estado.config = r.config;
+  let pulou = false;
+  const recebidos = {};
+  (r.candidatos || []).forEach(function (c) {
+    recebidos[c.insc] = true;
+    // resposta que pode ser mais velha que a última gravação desta pessoa: fica para a próxima consulta
+    if (estado.enviando[c.insc] || (estado.gravadoEm[c.insc] || 0) >= inicio) { pulou = true; return; }
+    estado.candidatos[c.insc] = c;
+  });
+  if (r.parcial) (r.removidos || []).forEach(function (insc) { delete estado.candidatos[insc]; });
+  else Object.keys(estado.candidatos).forEach(function (insc) { if (!recebidos[insc]) delete estado.candidatos[insc]; });
+  if (!pulou) estado.rev = r.rev || '';
+  if (estado.aberto && !estado.candidatos[estado.aberto]) estado.aberto = '';
+}
+
+function consultar(tudo) {
+  if (estado.consultando || !estado.ponte || estado.bloqueado) return;
+  estado.consultando = true;
+  clearTimeout(temporizadorConsulta);
+  const inicio = Date.now();
+  chamar(tudo === true || !estado.rev ? { acao: 'listar' } : { acao: 'mudancas', base: estado.rev }).then(function (r) {
+    estado.consultando = false;
+    if (r.ok) {
+      estado.semResposta = 0; estado.recado = '';
+      aplicar(r, inicio);
+    } else if (r.erro === 'codigo' || r.erro === 'sem_codigo') {
+      pedirEntrada(r.mensagem);
+    } else {
+      estado.semResposta++;
+      estado.recado = r.erro === 'rede' ? '' : (r.mensagem || '');
+    }
+    desenhar();
+    agendarConsulta();
+  });
+}
+function agendarConsulta() {
+  clearTimeout(temporizadorConsulta);
+  if (document.hidden || estado.bloqueado || !estado.config) return;
+  temporizadorConsulta = setTimeout(consultar, estado.semResposta ? Math.min(INTERVALO * (1 + estado.semResposta), 45000) : INTERVALO);
+}
+
+/* ====================================================================== */
+/* 4. Gravação em segundo plano: a tela marca na hora e envia depois      */
+/* ====================================================================== */
+function loteVazio(lote) { return !Object.keys(lote.docs).length && !Object.keys(lote.campos).length; }
+function temPendencia() { return Object.keys(estado.fila).length > 0 || Object.keys(estado.enviando).length > 0; }
+
+/** Registra uma mudança de uma pessoa. Mudanças seguidas na mesma pessoa viram um pedido só. */
+function alterar(insc, mudanca, atraso) {
+  const f = estado.fila[insc] || (estado.fila[insc] = { docs: {}, campos: {}, quando: 0 });
+  Object.keys(mudanca.docs || {}).forEach(function (k) { f.docs[k] = mudanca.docs[k]; });
+  Object.keys(mudanca.campos || {}).forEach(function (k) { f.campos[k] = mudanca.campos[k]; });
+  f.quando = Date.now() + (atraso === undefined ? ATRASO_CLIQUE : atraso);
+  desenhar();
+  bombear();
+}
+
+/** Envia o próximo lote pronto. Um pedido por vez, na ordem: a planilha também atende um de cada vez. */
+function bombear() {
+  clearTimeout(temporizadorFila);
+  if (estado.gravando || estado.bloqueado) return;
+  const agora = Date.now();
+  if (agora < estado.pausaAte) { temporizadorFila = setTimeout(bombear, estado.pausaAte - agora + 5); return; }
+  let proximo = '', espera = Infinity;
+  Object.keys(estado.fila).forEach(function (insc) {
+    const f = estado.fila[insc];
+    if (loteVazio(f)) { delete estado.fila[insc]; return; }
+    if (f.quando <= agora) { if (!proximo) proximo = insc; } else espera = Math.min(espera, f.quando - agora);
+  });
+  if (!proximo) {
+    if (espera < Infinity) temporizadorFila = setTimeout(bombear, espera + 5);
+    return;
+  }
+  const lote = estado.fila[proximo];
+  delete estado.fila[proximo];
+  estado.enviando[proximo] = lote;
+  estado.gravando = true;
+  desenhar();
+  const docs = {};
+  Object.keys(lote.docs).forEach(function (k) { docs[k] = !!lote.docs[k]; });
+  chamar({ acao: 'gravar', atendente: estado.nome, insc: proximo, docs: docs, campos: lote.campos }).then(function (r) {
+    delete estado.enviando[proximo];
+    estado.gravando = false;
+    if (r.ok) {
+      estado.candidatos[proximo] = r.candidato;
+      estado.gravadoEm[proximo] = Date.now();
+      estado.falha = ''; estado.tentativas = 0; estado.pausaAte = 0;
+      (r.avisos || []).forEach(function (a) { avisar(a); });
+    } else if (r.erro === 'inscricao') {
+      avisar(r.mensagem);
+      consultar(true);
+    } else {
+      // devolve o lote à fila; o que foi mudado depois dele continua valendo por cima
+      const depois = estado.fila[proximo] || { docs: {}, campos: {} };
+      const junto = { docs: {}, campos: {}, quando: 0 };
+      [lote, depois].forEach(function (x) {
+        Object.keys(x.docs).forEach(function (k) { junto.docs[k] = x.docs[k]; });
+        Object.keys(x.campos).forEach(function (k) { junto.campos[k] = x.campos[k]; });
+      });
+      estado.fila[proximo] = junto;
+      if (r.erro === 'codigo' || r.erro === 'sem_codigo') {
+        pedirEntrada(r.mensagem);
+      } else {
+        estado.tentativas++;
+        estado.falha = r.erro === 'ocupada' ? 'A planilha está ocupada.' : (r.erro === 'rede' ? 'Sem conexão.' : r.mensagem || 'A planilha não gravou.');
+        estado.pausaAte = Date.now() + Math.min(4000 * estado.tentativas, 30000);
+      }
+    }
+    desenhar();
+    bombear();
+  });
+}
+function tentarAgora() {
+  estado.pausaAte = 0;
+  Object.keys(estado.fila).forEach(function (insc) { estado.fila[insc].quando = 0; });
+  bombear();
+  consultar();
+}
+
+/* ====================================================================== */
+/* 5. Ações do atendente                                                  */
+/* ====================================================================== */
+function visao(insc) {
+  const c = estado.candidatos[insc];
+  if (!c) return null;
+  const a = estado.enviando[insc], f = estado.fila[insc];
+  let ov = null;
+  if (a || f) {
+    ov = { docs: {}, campos: {} };
+    [a, f].forEach(function (x) {
+      if (!x) return;
+      Object.keys(x.docs).forEach(function (k) { ov.docs[k] = x.docs[k]; });
+      Object.keys(x.campos).forEach(function (k) { ov.campos[k] = x.campos[k]; });
+    });
+  }
+  return Logica.ver(estado.config, c, ov);
+}
+function marcarTodos(insc) {
+  const v = visao(insc);
+  const novos = Logica.comunsAMarcar(estado.config, v.docs);
+  if (!Object.keys(novos).length) { avisar('Os documentos comuns já estão marcados.'); return; }
+  alterar(insc, { docs: novos });
+}
+function desmarcarTodos(insc) {
+  const v = visao(insc);
+  const antes = {}, limpos = {};
+  Object.keys(v.docs).forEach(function (k) { if (v.docs[k]) { antes[k] = true; limpos[k] = false; } });
+  if (!Object.keys(limpos).length) return;
+  alterar(insc, { docs: limpos });
+  avisar('Documentos desmarcados.', 'Desfazer', function () { alterar(insc, { docs: antes }); });
+}
+function indeferir(insc, motivo) {
+  estado.painelMotivo = false;
+  alterar(insc, { campos: { situacao: estado.config.nomes.indeferida, motivo: motivo } });
+  avisar('Indeferida: ' + motivo + '.', 'Desfazer', function () { desfazerSituacao(insc); });
+}
+function naoCompareceu(insc) {
+  alterar(insc, { campos: { situacao: estado.config.nomes.ausente } });
+  avisar('Marcada como "' + estado.config.nomes.ausente + '".', 'Desfazer', function () { desfazerSituacao(insc); });
+}
+/** Volta a situação a ser calculada pelos documentos. Se a mudança nem chegou a ser enviada, só a cancela. */
+function desfazerSituacao(insc) {
+  const f = estado.fila[insc];
+  if (f && 'situacao' in f.campos) {
+    delete f.campos.situacao;
+    delete f.campos.motivo;
+    if (loteVazio(f)) delete estado.fila[insc];
+    desenhar();
+    return;
+  }
+  alterar(insc, { campos: { situacao: estado.config.nomes.aguardando } });
+}
+
+function abrir(insc) {
+  if (!estado.candidatos[insc]) return;
+  const jaHavia = !!estado.aberto;
+  if (estado.aberto !== insc) { estado.painelMotivo = false; limparDesfazer(); }
+  estado.aberto = insc;
+  try {
+    if (jaHavia) history.replaceState({ ficha: insc }, '');
+    else history.pushState({ ficha: insc }, '');
+  } catch (e) { /* sem histórico: o botão Voltar da tela resolve */ }
+  desenhar();
+}
+function fechar(peloHistorico) {
+  if (!estado.aberto) return;
+  estado.aberto = '';
+  estado.painelMotivo = false;
+  if (!peloHistorico) {
+    try { if (history.state && history.state.ficha) history.back(); } catch (e) { /* nada */ }
+  }
+  desenhar();
+}
+
+/* ---------- avisos rápidos, com "Desfazer" quando cabe */
+function limparDesfazer() {
+  Array.prototype.slice.call(document.querySelectorAll('#avisos .aviso[data-desfazer]')).forEach(function (a) { a.parentNode.removeChild(a); });
+}
+function avisar(texto, rotulo, acao) {
+  const caixa = el('div', { class: 'aviso' }, el('span', { text: texto }));
+  const sumir = function () { if (caixa.parentNode) caixa.parentNode.removeChild(caixa); };
+  if (rotulo) {
+    limparDesfazer();                                   // só o último "Desfazer" fica à vista, para não desfazer a coisa errada
+    caixa.setAttribute('data-desfazer', '');
+    caixa.appendChild(el('button', { type: 'button', text: rotulo, onclick: function () { sumir(); acao(); } }));
+  }
+  $('avisos').appendChild(caixa);
+  while ($('avisos').children.length > 3) $('avisos').removeChild($('avisos').firstChild);
+  setTimeout(sumir, rotulo ? 9000 : 6000);
+}
+
+/* ====================================================================== */
+/* 6. Desenho                                                             */
+/* ====================================================================== */
+function desenhar() {
+  if (desenhoPendente) return;
+  desenhoPendente = true;
+  const fazer = function () {
+    desenhoPendente = false;
+    const foco = document.activeElement && document.activeElement.getAttribute ? document.activeElement.getAttribute('data-foco') : null;
+    desenharTopo();
+    if (estado.config) { desenharLista(); desenharFicha(); }
+    if (foco && (!document.activeElement || document.activeElement.getAttribute('data-foco') !== foco)) {
+      const alvo = document.querySelector('[data-foco="' + foco.replace(/["\\]/g, '') + '"]');
+      if (alvo) alvo.focus({ preventScroll: true });
+    }
+  };
+  if (document.hidden || typeof requestAnimationFrame !== 'function') setTimeout(fazer, 0);
+  else requestAnimationFrame(fazer);
+}
+
+function desenharTopo() {
+  const cfg = estado.config;
+  const partes = [];
+  if (cfg && cfg.edital) partes.push('Edital ' + cfg.edital);
+  if (cfg && cfg.campus) partes.push('campus ' + cfg.campus);
+  $('subtitulo').textContent = partes.join(', ');
+  const rede = $('rede');
+  let classe = '', texto = '';
+  if (!cfg) { classe = 'parada'; texto = ''; }
+  else if (estado.falha) { classe = 'erro'; texto = 'Não salvou'; }
+  else if (temPendencia()) { classe = 'salvando'; texto = 'Salvando…'; }
+  else if (estado.semResposta >= 2) { classe = 'erro'; texto = estado.recado ? 'Sem resposta' : 'Sem conexão'; }
+  else { classe = ''; texto = 'Tudo salvo'; }
+  rede.className = 'rede ' + classe;
+  rede.textContent = texto;
+  const quem = $('botao-quem');
+  quem.hidden = !estado.nome || !cfg;
+  quem.textContent = estado.nome;
+  $('versoes').textContent = 'Tela versão ' + VERSAO_DA_TELA + (cfg ? ', planilha versão ' + cfg.versao : '');
+
+  const faixa = $('faixa');
+  if (estado.falha) {
+    faixa.hidden = false; faixa.className = 'faixa';
+    $('faixa-texto').textContent = 'Não salvou. ' + estado.falha + ' O que você marcou continua na tela e será enviado de novo.';
+  } else if (cfg && estado.semResposta >= 2) {
+    faixa.hidden = false; faixa.className = 'faixa branda';
+    $('faixa-texto').textContent = (estado.recado || 'Sem conexão com a planilha.') + ' A lista pode estar desatualizada.';
+  } else {
+    faixa.hidden = true;
+  }
+  document.documentElement.style.setProperty('--cabeca', $('cabeca').offsetHeight + 'px');
+}
+
+/* ---------- lista */
+function posicaoAC(outras) {
+  const m = /AC\s+(\d+)/.exec(outras || '');
+  return m ? Number(m[1]) : 9999;
+}
+function desenharLista() {
+  const cfg = estado.config;
+  const todos = Object.keys(estado.candidatos).map(visao);
+  const aprovados = todos.filter(function (v) { return v.lista === cfg.aprovado; });
+  const fora = todos.filter(function (v) { return v.lista !== cfg.aprovado; });
+
+  // cursos: os da aba Config, na ordem dela, e depois qualquer outro que apareça nos dados
+  const cursos = cfg.cursos.map(function (c) { return c.nome; });
+  todos.forEach(function (v) { if (v.curso && cursos.indexOf(v.curso) < 0) cursos.push(v.curso); });
+  if (estado.curso && cursos.indexOf(estado.curso) < 0) estado.curso = '';
+  const doCurso = function (v) { return !estado.curso || v.curso === estado.curso; };
+  const aba = function (rotulo, valor, n) {
+    return el('button', { class: 'aba', type: 'button', role: 'tab', 'aria-selected': estado.curso === valor ? 'true' : 'false',
+      onclick: function () { estado.curso = valor; guardar(); desenhar(); } }, rotulo + ' ', el('small', { text: String(n) }));
+  };
+  trocarFilhos($('cursos'), aba('Todos', '', aprovados.length),
+    cursos.map(function (c) { return aba(c, c, aprovados.filter(function (v) { return v.curso === c; }).length); }));
+
+  // contadores por situação (dos aprovados do curso escolhido); tocar filtra, tocar de novo solta
+  const base = aprovados.filter(doCurso);
+  const nomes = [cfg.nomes.aguardando, cfg.nomes.pendencia, cfg.nomes.concluida, cfg.nomes.indeferida, cfg.nomes.ausente];
+  cfg.situacoes.forEach(function (s) { if (nomes.indexOf(s) < 0) nomes.push(s); });
+  const contadores = nomes.map(function (s) {
+    const n = base.filter(function (v) { return v.situacao === s; }).length;
+    const ativo = !estado.fora && estado.situacao === s;
+    return el('button', { class: 'conta ' + Logica.classeDaSituacao(s), type: 'button', 'aria-pressed': ativo ? 'true' : 'false',
+      onclick: function () { estado.fora = false; estado.situacao = ativo ? '' : s; desenhar(); } }, s, el('b', { text: String(n) }));
+  });
+  const foraDoCurso = fora.filter(doCurso);
+  if (foraDoCurso.length) {
+    contadores.push(el('button', { class: 'conta fora', type: 'button', 'aria-pressed': estado.fora ? 'true' : 'false', title: 'Classificáveis e quem saiu da lista de aprovados',
+      onclick: function () { estado.fora = !estado.fora; estado.situacao = ''; desenhar(); } }, 'Fora dos aprovados', el('b', { text: String(foraDoCurso.length) })));
+  } else if (estado.fora) {
+    estado.fora = false;
+  }
+  trocarFilhos($('contadores'), contadores);
+
+  // quem aparece
+  const termos = Logica.semAcento(estado.busca).split(' ').filter(function (t) { return t; });
+  let mostrar;
+  if (termos.length) {
+    mostrar = todos.filter(function (v) {
+      const nome = Logica.semAcento(v.nome), insc = String(v.insc);
+      return termos.every(function (t) { return nome.indexOf(t) >= 0 || insc.indexOf(t) === 0; });
+    });
+  } else if (estado.fora) {
+    mostrar = foraDoCurso;
+  } else {
+    mostrar = base.filter(function (v) { return !estado.situacao || v.situacao === estado.situacao; });
+  }
+  const ordemCota = function (q) { const i = cfg.cotas.indexOf(q); return i < 0 ? 99 : i; };
+  const ehAprovado = function (v) { return v.lista === cfg.aprovado; };
+  mostrar.sort(function (a, b) {
+    return (cursos.indexOf(a.curso) - cursos.indexOf(b.curso)) ||
+      ((ehAprovado(a) ? 0 : 1) - (ehAprovado(b) ? 0 : 1)) ||
+      (ehAprovado(a) ? (ordemCota(a.cota) - ordemCota(b.cota)) || ((Number(a.clas) || 9999) - (Number(b.clas) || 9999)) : posicaoAC(a.outras) - posicaoAC(b.outras)) ||
+      a.nome.localeCompare(b.nome, 'pt-BR');
+  });
+
+  const itens = [];
+  let cursoAtual = null, grupoAtual = null;
+  mostrar.forEach(function (v) {
+    if ((!estado.curso || termos.length) && v.curso !== cursoAtual) {
+      cursoAtual = v.curso; grupoAtual = null;
+      const info = cfg.cursos.filter(function (c) { return c.nome === v.curso; })[0];
+      itens.push(el('h2', { class: 'grupo-curso' }, v.curso || 'Sem curso', info ? el('small', { text: info.vagas + ' vagas' }) : null));
+    }
+    const grupo = ehAprovado(v) ? 'cota:' + v.cota : 'fora:' + v.lista;
+    if (grupo !== grupoAtual) {
+      grupoAtual = grupo;
+      const quantos = mostrar.filter(function (x) { return x.curso === v.curso && (ehAprovado(x) ? 'cota:' + x.cota : 'fora:' + x.lista) === grupo; }).length;
+      const rotulo = ehAprovado(v) ? (v.cota === 'AC' ? 'Ampla concorrência (AC)' : v.cota + ': ' + (ROTULO_COTA[v.cota] || 'reserva de vaga')) : (v.lista || 'Sem lista') + ': não está entre os aprovados';
+      itens.push(el('h3', { class: 'grupo-cota', text: rotulo + ' (' + quantos + ')' }));
+    }
+    const meta = ['Inscrição ' + v.insc];
+    if (!ehAprovado(v) && v.outras) meta.push(v.outras);
+    const marcas = [];
+    if (v.banca && Logica.chave(v.hetero).indexOf('deferida') !== 0) marcas.push('banca: ' + v.hetero.toLowerCase());
+    if (v.depois) marcas.push('entregar depois');
+    itens.push(el('button', { class: 'pessoa', type: 'button', 'data-insc': v.insc, 'data-foco': 'pessoa:' + v.insc, 'aria-current': estado.aberto === v.insc ? 'true' : null,
+      onclick: function () { abrir(v.insc); } },
+      el('span', { class: 'pos', text: ehAprovado(v) && v.clas ? v.clas + 'º' : '' }),
+      el('span', {}, el('span', { class: 'nome', text: v.nome }),
+        el('span', { class: 'meta' }, meta.join(', '), marcas.length ? [', ', el('em', { text: marcas.join(', ') })] : null)),
+      ehAprovado(v) || v.situacao ? el('span', { class: 'selo ' + Logica.classeDaSituacao(v.situacao), text: v.situacao || 'Sem situação' }) : el('span', {})));
+  });
+  if (!itens.length) {
+    itens.push(el('p', { class: 'vazio', text: !todos.length ? 'A planilha ainda não tem candidatos. Importe o resultado pelo menu Pré-matrícula.' :
+      (termos.length ? 'Ninguém encontrado para "' + estado.busca.trim() + '". A busca olha o nome e o começo da inscrição, em todos os cursos.' : 'Ninguém nesta situação.') }));
+  }
+  const lista = $('lista'), rolagem = lista.scrollTop, pagina = window.pageYOffset;
+  trocarFilhos(lista, itens);
+  if (lista.scrollTop !== rolagem) lista.scrollTop = rolagem;
+  if (window.pageYOffset !== pagina) window.scrollTo(0, pagina);
+}
+
+/* ---------- ficha */
+let fichaMontada = '';
+const pecas = {};
+
+function desenharFicha() {
+  const painel = $('ficha');
+  const insc = estado.aberto;
+  document.body.classList.toggle('com-ficha', !!insc);
+  if (!insc) {
+    if (fichaMontada !== '-') {
+      trocarFilhos(painel, el('p', { class: 'ficha-vazia', text: 'Escolha uma pessoa na lista, ou busque pelo nome ou pela inscrição.' }));
+      fichaMontada = '-';
+    }
+    return;
+  }
+  if (fichaMontada !== insc) montarFicha(painel, insc);
+  const cfg = estado.config, v = visao(insc);
+  const tipo = Logica.tipoSituacao(v.situacao);
+  const aprovado = v.lista === cfg.aprovado;
+  pecas.folha.className = 'folha ' + Logica.classeDaSituacao(v.situacao);
+  pecas.barra.className = 'barra-ficha ' + Logica.classeDaSituacao(v.situacao);
+  pecas.barraNome.textContent = v.nome;
+
+  // cabeçalho
+  trocarFilhos(pecas.cab,
+    el('h2', { text: v.nome }),
+    el('span', { class: 'selo ' + Logica.classeDaSituacao(v.situacao), text: v.situacao || 'Sem situação' }));
+  trocarFilhos(pecas.dados,
+    el('div', {}, el('dt', { text: 'Inscrição' }), el('dd', { text: v.insc })),
+    el('div', {}, el('dt', { text: 'Curso' }), el('dd', { text: v.curso })),
+    el('div', {}, el('dt', { text: 'Cota' }), el('dd', {}, v.cota || 'sem vaga', v.cota && ROTULO_COTA[v.cota] ? [' ', el('small', { text: ROTULO_COTA[v.cota] })] : null)),
+    el('div', {}, el('dt', { text: aprovado ? 'Classificação' : 'Posição nas listas' }), el('dd', { text: aprovado ? (v.clas ? v.clas + 'º' : '') : (v.outras || 'não consta') })));
+
+  // avisos da ficha
+  const alertas = [];
+  if (!aprovado) {
+    alertas.push(el('p', { class: 'alerta atencao' }, (v.lista || 'Sem lista') + '. ',
+      el('span', { text: 'Não está entre os aprovados desta chamada' + (v.cota ? ' (já esteve, na cota ' + v.cota + ').' : '.') })));
+  }
+  if (tipo === 'fixa') {
+    alertas.push(el('p', { class: 'alerta ' + Logica.classeDaSituacao(v.situacao) }, v.situacao + '. ',
+      el('span', { text: v.motivo ? 'Motivo: ' + v.motivo + '.' : 'Os documentos não mudam esta situação.' }),
+      el('button', { class: 'botao pequeno', type: 'button', 'data-foco': 'desfazer', text: 'Desfazer', onclick: function () { desfazerSituacao(insc); } })));
+  }
+  trocarFilhos(pecas.alertas, alertas);
+
+  // documentos
+  const regras = Logica.regrasDe(cfg, v.docs);
+  pecas.blocoDocs.hidden = !regras.length;
+  if (regras.length) trocarFilhos(pecas.docs, linhasDeDocumentos(cfg, v, regras, insc, tipo));
+
+  // o que falta
+  const resumo = [];
+  const itensDe = function (texto) { return texto.split('; ').filter(function (x) { return x; }).map(function (x) { return el('li', { text: x }); }); };
+  if (v.pend) {
+    resumo.push(el('div', { class: 'falta' }, el('p', { class: 'resumo-titulo' }, 'Falta ', cfg.prazoPend ? el('small', { text: '(prazo: ' + cfg.prazoPend + ')' }) : null),
+      el('ul', { class: 'resumo' }, itensDe(v.pend))));
+  }
+  if (v.depois) {
+    resumo.push(el('div', { class: 'depois-lista' }, el('p', { class: 'resumo-titulo' }, 'Entregar depois ', cfg.prazoDepois ? el('small', { text: '(até ' + cfg.prazoDepois + ')' }) : null),
+      el('ul', { class: 'resumo' }, itensDe(v.depois))));
+  }
+  if (!v.pend && tipo === 'concluida') resumo.push(el('p', { class: 'tudo-certo', text: v.depois ? 'Pré-matrícula concluída, com documento a entregar depois.' : 'Pré-matrícula concluída. Nada pendente.' }));
+  pecas.blocoResumo.hidden = !resumo.length;
+  trocarFilhos(pecas.resumo, resumo);
+
+  // heteroidentificação (só para quem passa pela banca)
+  pecas.blocoBanca.hidden = !v.banca;
+  if (v.banca) {
+    trocarFilhos(pecas.banca, cfg.hetero.filter(function (h) { return Logica.chave(h).indexOf('nao_se_aplica') !== 0; }).map(function (h) {
+      return el('button', { class: 'botao pequeno', type: 'button', 'aria-pressed': v.hetero === h ? 'true' : 'false', 'data-foco': 'banca:' + h, text: h,
+        onclick: function () { if (v.hetero !== h) alterar(insc, { campos: { hetero: h } }); } });
+    }));
+  }
+
+  // situação posta à mão
+  pecas.blocoSituacao.hidden = tipo === 'fixa' || !aprovado;
+  pecas.motivos.hidden = !estado.painelMotivo || tipo === 'fixa' || !aprovado;
+  pecas.botaoIndeferir.setAttribute('aria-expanded', estado.painelMotivo ? 'true' : 'false');
+
+  // textos: não mexe no campo em que a pessoa está digitando
+  [['obs', pecas.obs], ['tel', pecas.tel], ['email', pecas.email]].forEach(function (par) {
+    if (document.activeElement !== par[1] && par[1].value !== v[par[0]]) par[1].value = v[par[0]];
+  });
+
+  // rodapé
+  const pendente = !!(estado.fila[insc] || estado.enviando[insc]);
+  pecas.gravacao.textContent = pendente ? (estado.falha ? 'Não salvou. Vai tentar de novo.' : 'Salvando…') : (estado.gravadoEm[insc] ? 'Salvo' : '');
+  pecas.gravacao.className = 'gravacao' + (pendente && estado.falha ? ' erro' : '');
+  pecas.barraGravacao.textContent = pendente ? (estado.falha ? 'Não salvou: tentar' : 'Salvando…') : (estado.gravadoEm[insc] ? 'Salvo' : '');
+  pecas.barraGravacao.className = pendente && estado.falha ? 'falhou' : '';
+  pecas.barraGravacao.disabled = !(pendente && estado.falha);
+  pecas.alteracao.textContent = v.atualizado ? 'Última alteração em ' + v.atualizado + (v.atendente ? ', por ' + v.atendente : '') + '.' : 'Sem alterações ainda.';
+}
+
+/** Monta as partes fixas da ficha de uma pessoa. As partes que mudam são preenchidas em desenharFicha. */
+function montarFicha(painel, insc) {
+  const cfg = estado.config;
+  const campoDeTexto = function (campo, entrada) {
+    entrada.addEventListener('input', function () {
+      const campos = {};
+      campos[campo] = entrada.value;
+      alterar(insc, { campos: campos }, ATRASO_TEXTO);
+    });
+    entrada.addEventListener('blur', function () {
+      const f = estado.fila[insc];
+      if (f && campo in f.campos) { f.quando = 0; bombear(); }
+    });
+    return entrada;
+  };
+  pecas.barraNome = el('span', {});
+  pecas.barraGravacao = el('button', { type: 'button', onclick: tentarAgora });
+  pecas.cab = el('div', { class: 'folha-cab' });
+  pecas.dados = el('dl', { class: 'dados' });
+  pecas.alertas = el('div', {});
+  pecas.docs = el('ul', { class: 'docs' });
+  pecas.blocoDocs = el('div', { class: 'bloco' },
+    el('div', { class: 'bloco-titulo' }, el('h3', { text: 'Documentos entregues' }),
+      el('div', { class: 'acoes' },
+        el('button', { class: 'botao pequeno', type: 'button', 'data-foco': 'marcar-todos', text: 'Marcar todos', onclick: function () { marcarTodos(insc); } }),
+        el('button', { class: 'botao pequeno', type: 'button', 'data-foco': 'desmarcar-todos', text: 'Desmarcar todos', onclick: function () { desmarcarTodos(insc); } }))),
+    pecas.docs);
+  pecas.resumo = el('div', {});
+  pecas.blocoResumo = el('div', { class: 'bloco' }, pecas.resumo);
+  pecas.banca = el('div', { class: 'acoes' });
+  pecas.blocoBanca = el('div', { class: 'bloco' }, el('div', { class: 'bloco-titulo' }, el('h3', { text: 'Heteroidentificação (banca)' })), pecas.banca);
+
+  pecas.outro = el('input', { type: 'text', maxlength: '200', placeholder: 'Outro motivo', 'aria-label': 'Outro motivo' });
+  const usarOutro = function () {
+    const m = pecas.outro.value.trim();
+    if (!m) { pecas.outro.focus(); return; }
+    pecas.outro.value = '';
+    indeferir(insc, m);
+  };
+  pecas.outro.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); usarOutro(); } });
+  pecas.motivos = el('div', { class: 'motivos' },
+    el('p', { text: 'Por que a pré-matrícula foi indeferida?' }),
+    el('div', { class: 'acoes' }, cfg.motivos.map(function (m) {
+      return el('button', { class: 'botao', type: 'button', text: m, onclick: function () { indeferir(insc, m); } });
+    })),
+    el('div', { class: 'outro' }, pecas.outro,
+      el('button', { class: 'botao', type: 'button', text: 'Indeferir por este motivo', onclick: usarOutro }),
+      el('button', { class: 'botao', type: 'button', text: 'Cancelar', onclick: function () { estado.painelMotivo = false; desenhar(); } })));
+  pecas.botaoIndeferir = el('button', { class: 'botao perigo', type: 'button', 'data-foco': 'indeferir', 'aria-expanded': 'false', text: 'Indeferir…',
+    onclick: function () { estado.painelMotivo = !estado.painelMotivo; desenhar(); } });
+  pecas.blocoSituacao = el('div', { class: 'bloco' },
+    el('div', { class: 'bloco-titulo' }, el('h3', { text: 'Indeferir ou registrar ausência' })),
+    el('div', { class: 'acoes' }, pecas.botaoIndeferir,
+      el('button', { class: 'botao', type: 'button', 'data-foco': 'ausente', text: cfg.nomes.ausente, onclick: function () { naoCompareceu(insc); } })),
+    pecas.motivos);
+
+  pecas.obs = campoDeTexto('obs', el('textarea', { maxlength: '1000', rows: '3' }));
+  pecas.tel = campoDeTexto('tel', el('input', { type: 'tel', maxlength: '60', autocomplete: 'off' }));
+  pecas.email = campoDeTexto('email', el('input', { type: 'email', maxlength: '200', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' }));
+  const blocoTextos = el('div', { class: 'bloco' },
+    el('label', { class: 'campo' }, el('span', { text: 'Observações' }), pecas.obs),
+    el('div', { class: 'dupla' },
+      el('label', { class: 'campo' }, el('span', { text: 'Telefone' }), pecas.tel),
+      el('label', { class: 'campo' }, el('span', { text: 'E-mail' }), pecas.email)));
+  pecas.alteracao = el('span', {});
+  pecas.gravacao = el('span', { class: 'gravacao' });
+  pecas.folha = el('article', { class: 'folha' }, pecas.cab, pecas.dados, pecas.alertas, pecas.blocoDocs, pecas.blocoResumo, pecas.blocoBanca, pecas.blocoSituacao, blocoTextos,
+    el('div', { class: 'rodape' }, pecas.alteracao, pecas.gravacao));
+  pecas.barra = el('div', { class: 'barra-ficha' },
+    el('button', { type: 'button', text: '‹ Lista', 'aria-label': 'Voltar à lista', onclick: function () { fechar(false); } }), pecas.barraNome, pecas.barraGravacao);
+  trocarFilhos(painel, pecas.barra, pecas.folha);
+  painel.scrollTop = 0;
+  fichaMontada = insc;
+}
+
+/**
+ * Linhas do checklist. Provisórios (histórico parcial, certidão) não são linhas próprias: ficam como alternativa
+ * logo abaixo do documento que substituem, para ninguém achar que são mais um documento obrigatório.
+ */
+function linhasDeDocumentos(cfg, v, regras, insc, tipo) {
+  const vale = {};
+  regras.forEach(function (r) { vale[r.codigo] = r; });
+  const alternativas = {}, ehAlternativa = {};
+  regras.forEach(function (r) {
+    const cobertos = r.cobre.filter(function (c) { return vale[c]; });
+    if (!cobertos.length) return;
+    let ultimo = '';
+    regras.forEach(function (x) { if (cobertos.indexOf(x.codigo) >= 0) ultimo = x.codigo; });
+    (alternativas[ultimo] = alternativas[ultimo] || []).push(r);
+    ehAlternativa[r.codigo] = true;
+  });
+  const tamanhoDoGrupo = {};
+  regras.forEach(function (r) { if (r.grupo && !ehAlternativa[r.codigo]) tamanhoDoGrupo[r.grupo] = (tamanhoDoGrupo[r.grupo] || 0) + 1; });
+
+  const caixa = function (r, rotulo) {
+    const marcado = !!v.docs[r.codigo];
+    let nota = '';
+    if (!marcado && v.cobertos[r.codigo]) nota = 'entregar depois' + (cfg.prazoDepois ? ', até ' + cfg.prazoDepois : '');
+    else if (!marcado && v.dispensados[r.codigo]) nota = 'dispensado';
+    return el('label', { class: 'doc' + (marcado ? ' marcado' : '') + (!marcado && v.dispensados[r.codigo] ? ' dispensado' : '') + (!marcado && v.cobertos[r.codigo] ? ' depois' : '') },
+      el('input', { type: 'checkbox', checked: marcado, 'data-foco': 'doc:' + r.codigo, 'data-doc': r.codigo,
+        onchange: function (e) { const d = {}; d[r.codigo] = e.target.checked; alterar(insc, { docs: d }); } }),
+      el('span', { class: 'doc-nome' }, rotulo || r.documento, nota ? el('span', { class: 'doc-nota', text: nota }) : null));
+  };
+  const linhas = [], rotulados = {};
+  regras.forEach(function (r) {
+    if (ehAlternativa[r.codigo]) return;
+    const emGrupo = r.grupo && tamanhoDoGrupo[r.grupo] > 1;
+    if (emGrupo && !rotulados[r.grupo]) {
+      rotulados[r.grupo] = true;
+      linhas.push(el('li', { class: 'rotulo-grupo', text: r.grupo + ': basta um' + (tamanhoDoGrupo[r.grupo] === 2 ? ' dos dois' : '') }));
+    }
+    const naoAtende = r.codigo === cfg.docEscola && tipo !== 'fixa' ?
+      el('button', { class: 'botao pequeno perigo nao-atende', type: 'button', 'data-foco': 'nao-atende', text: 'Não atende',
+        title: 'Não cursou todo o ensino fundamental em escola pública: indefere a pré-matrícula',
+        onclick: function () { indeferir(insc, cfg.motivoEscola); } }) : null;
+    linhas.push(el('li', { class: emGrupo ? 'no-grupo' : null }, el('div', { class: 'doc-linha' }, caixa(r), naoAtende)));
+    (alternativas[r.codigo] || []).forEach(function (p) {
+      const nome = p.documento.charAt(1) === p.documento.charAt(1).toLowerCase() ? p.documento.charAt(0).toLowerCase() + p.documento.slice(1) : p.documento;
+      linhas.push(el('li', { class: 'alternativa' }, el('div', { class: 'doc-linha' }, caixa(p, 'Não trouxe? Aceitar ' + nome))));
+    });
+  });
+  return linhas;
+}
+
+/* ====================================================================== */
+/* 7. Entrada, menu e partida                                             */
+/* ====================================================================== */
+function mostrarEntrada(opcoes) {
+  opcoes = opcoes || {};
+  $('entrada').hidden = false;
+  $('entrada-texto').textContent = opcoes.texto || 'Para começar neste aparelho:';
+  $('campo-ponte').hidden = !!estado.ponte && !opcoes.pedirPonte;
+  $('in-ponte').value = opcoes.pedirPonte ? '' : estado.ponte;
+  $('in-codigo').value = opcoes.manterCodigo ? estado.codigo : '';
+  $('in-nome').value = estado.nome;
+  $('entrada-erro').hidden = !opcoes.erro;
+  $('entrada-erro').textContent = opcoes.erro || '';
+  $('botao-cancelar').hidden = !opcoes.podeCancelar;
+  $('botao-outra').hidden = !estado.ponte || !!opcoes.pedirPonte;
+  $('botao-entrar').disabled = false;
+  $('botao-entrar').textContent = 'Entrar';
+  const primeiro = !$('campo-ponte').hidden ? $('in-ponte') : (!$('in-codigo').value ? $('in-codigo') : $('in-nome'));
+  setTimeout(function () { primeiro.focus(); }, 0);
+}
+/** A planilha recusou o código (foi trocado, ou ainda não foi definido): pede de novo, sem perder o que está na tela. */
+function pedirEntrada(mensagem) {
+  if (estado.bloqueado) return;
+  estado.bloqueado = true;
+  clearTimeout(temporizadorConsulta);
+  mostrarEntrada({ erro: mensagem, texto: 'A planilha pediu o código da equipe de novo:' });
+}
+function entrar(evento) {
+  evento.preventDefault();
+  const erro = function (m) { $('entrada-erro').hidden = false; $('entrada-erro').textContent = m; };
+  const ponte = $('campo-ponte').hidden ? estado.ponte : Logica.normalizarPonte($('in-ponte').value);
+  const codigo = $('in-codigo').value.trim(), nome = $('in-nome').value.replace(/\s+/g, ' ').trim();
+  if (!ponte) return erro('Confira o endereço da ponte: ele começa com https://script.google.com/ e termina em /exec.');
+  if (!codigo) return erro('Informe o código da equipe.');
+  if (!nome) return erro('Informe seu nome, para a planilha registrar quem atendeu.');
+  const antes = { ponte: estado.ponte, codigo: estado.codigo, nome: estado.nome };
+  const trocouDePlanilha = ponte !== estado.ponte;
+  estado.ponte = ponte; estado.codigo = codigo; estado.nome = nome;
+  $('botao-entrar').disabled = true;
+  $('botao-entrar').textContent = 'Conectando…';
+  $('entrada-erro').hidden = true;
+  const inicio = Date.now();
+  chamar({ acao: 'listar' }).then(function (r) {
+    $('botao-entrar').disabled = false;
+    $('botao-entrar').textContent = 'Entrar';
+    if (!r.ok) {
+      estado.ponte = antes.ponte; estado.codigo = antes.codigo; estado.nome = antes.nome;
+      if (r.erro === 'rede') return erro('Não consegui falar com a planilha. Confira a internet e o endereço da ponte. Se os dois estiverem certos, o App da Web precisa estar implantado com acesso "Qualquer pessoa".');
+      return erro(r.mensagem || 'A planilha recusou o pedido.');
+    }
+    if (trocouDePlanilha) { estado.candidatos = {}; estado.fila = {}; estado.enviando = {}; estado.rev = ''; estado.aberto = ''; }
+    estado.bloqueado = false; estado.semResposta = 0;
+    guardar();
+    aplicar(r, inicio);
+    $('entrada').hidden = true;
+    $('app').hidden = false;
+    desenhar();
+    bombear();
+    agendarConsulta();
+  });
+}
+
+function linkDaEquipe() {
+  if (!/^https?:$/.test(location.protocol)) {
+    avisar('O link para a equipe só existe quando a página está hospedada (por exemplo, no GitHub Pages).');
+    return;
+  }
+  // no link vai só o código da implantação (ou o endereço inteiro, nos testes); o código da equipe nunca vai
+  const m = /\/s\/([\w-]+)\/exec/.exec(estado.ponte);
+  const link = location.href.split('#')[0] + '#p=' + (m ? m[1] : encodeURIComponent(estado.ponte));
+  const mostrar = function () {
+    const campo = el('input', { type: 'text', readonly: true, value: link, 'aria-label': 'Link para a equipe' });
+    const caixa = el('div', { class: 'aviso' }, el('div', { class: 'copia' }, campo, el('button', { type: 'button', text: 'Fechar', onclick: function () { caixa.parentNode.removeChild(caixa); } })));
+    $('avisos').appendChild(caixa);
+    campo.focus(); campo.select();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(function () { avisar('Link copiado. Envie à equipe junto com o código, por canais diferentes.'); }, mostrar);
+  } else mostrar();
+}
+
+function ligarEventos() {
+  $('form-entrada').addEventListener('submit', entrar);
+  $('botao-cancelar').addEventListener('click', function () { $('entrada').hidden = true; });
+  $('botao-outra').addEventListener('click', function () { mostrarEntrada({ pedirPonte: true, podeCancelar: !!estado.config && !estado.bloqueado, texto: 'Informe o endereço da ponte da outra planilha:' }); });
+  $('busca').addEventListener('input', function () { estado.busca = $('busca').value; desenhar(); });
+  $('busca').addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' || !$('busca').value.trim()) return;
+    const primeira = document.querySelector('#lista .pessoa');
+    if (primeira) abrir(primeira.getAttribute('data-insc'));
+  });
+  $('faixa-botao').addEventListener('click', tentarAgora);
+  const menu = $('menu'), quem = $('botao-quem');
+  const fecharMenu = function () { menu.hidden = true; quem.setAttribute('aria-expanded', 'false'); };
+  quem.addEventListener('click', function (e) { e.stopPropagation(); menu.hidden = !menu.hidden; quem.setAttribute('aria-expanded', menu.hidden ? 'false' : 'true'); });
+  document.addEventListener('click', function (e) { if (!menu.hidden && !menu.contains(e.target)) fecharMenu(); });
+  menu.addEventListener('click', function (e) {
+    const acao = e.target.getAttribute && e.target.getAttribute('data-acao');
+    if (!acao) return;
+    fecharMenu();
+    if (acao === 'atualizar') { estado.semResposta = 0; consultar(true); avisar('Atualizando a lista…'); }
+    if (acao === 'trocar') mostrarEntrada({ podeCancelar: true, manterCodigo: true, texto: 'Troque o nome ou o código da equipe:' });
+    if (acao === 'link') linkDaEquipe();
+    if (acao === 'sair') {
+      if (temPendencia() && !window.confirm('Há marcações que ainda não foram salvas. Sair assim mesmo?')) return;
+      esquecer();
+      estado.fila = {}; estado.enviando = {};
+      location.reload();
+    }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      if (!menu.hidden) fecharMenu();
+      else if (estado.painelMotivo) { estado.painelMotivo = false; desenhar(); }
+      else if (estado.aberto && window.matchMedia('(max-width: 899px)').matches) fechar(false);
+    }
+    const digitando = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '');
+    if (e.key === '/' && !digitando && $('entrada').hidden) { e.preventDefault(); $('busca').focus(); $('busca').select(); }
+  });
+  window.addEventListener('popstate', function () { fechar(true); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) clearTimeout(temporizadorConsulta);
+    else if (estado.config && !estado.bloqueado) { consultar(); bombear(); desenhar(); }
+  });
+  window.addEventListener('online', tentarAgora);
+  window.addEventListener('beforeunload', function (e) {
+    if (!temPendencia()) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
+}
+
+function partida() {
+  ligarEventos();
+  const g = lerGuardado();
+  estado.ponte = Logica.normalizarPonte(g.ponte || '');
+  estado.codigo = typeof g.codigo === 'string' ? g.codigo : '';
+  estado.nome = typeof g.nome === 'string' ? g.nome : '';
+  estado.curso = typeof g.curso === 'string' ? g.curso : '';
+
+  // endereço da ponte vindo no link, depois do "#": vale mais que o guardado, e some da barra de endereço
+  const m = /[#&]p=([^&]+)/.exec(location.hash || '');
+  let outraPlanilha = false;
+  if (m) {
+    let doLink = '';
+    try { doLink = Logica.normalizarPonte(decodeURIComponent(m[1])); } catch (e) { doLink = ''; }
+    if (doLink && doLink !== estado.ponte) {
+      outraPlanilha = !!estado.ponte;
+      estado.ponte = doLink;
+      estado.codigo = '';
+    }
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* fica na barra, sem prejuízo */ }
+  }
+  desenharTopo();
+  if (!estado.ponte || !estado.codigo || !estado.nome) {
+    mostrarEntrada({ texto: outraPlanilha ? 'Este link é de outra planilha. Informe o código da equipe dela:' : '' });
+    return;
+  }
+  carregarInicio();
+}
+
+/** Primeira carga num aparelho já configurado. Se a planilha não responder, tenta de novo a cada poucos segundos. */
+function carregarInicio() {
+  clearTimeout(temporizadorConsulta);
+  $('app').hidden = false;
+  if (!estado.config) trocarFilhos($('lista'), el('p', { class: 'vazio', text: 'Carregando a lista…' }));
+  const inicio = Date.now();
+  chamar({ acao: 'listar' }).then(function (r) {
+    if (r.ok) {
+      estado.semResposta = 0;
+      aplicar(r, inicio);
+      desenhar();
+      agendarConsulta();
+    } else if (r.erro === 'codigo' || r.erro === 'sem_codigo') {
+      $('app').hidden = true;
+      mostrarEntrada({ erro: r.mensagem });
+    } else {
+      trocarFilhos($('lista'), el('p', { class: 'vazio' }, 'Não consegui falar com a planilha. Vou tentar de novo em instantes. ',
+        el('button', { class: 'botao pequeno', type: 'button', text: 'Tentar agora', onclick: carregarInicio })));
+      temporizadorConsulta = setTimeout(carregarInicio, 6000);
+    }
+  });
+}
+
+partida();
+})();
+</script>
+</body>
+</html>
