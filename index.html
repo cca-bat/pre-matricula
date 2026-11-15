@@ -9,7 +9,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https: http://localhost:* http://127.0.0.1:*; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Pré-matrícula</title>
 <!--
-  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 1 (para o controle_base.gs versão 4 ou mais nova)
+  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 2 (para o controle_base.gs versão 4 ou mais nova;
+  a impressão das tiras do checklist só aparece com a planilha na versão 8)
 
   Página única, sem bibliotecas e sem dados: nomes, regras e situações vêm da planilha, pela ponte
   (o App da Web do controle_base.gs). Pode ser aberta com dois cliques ou hospedada num link.
@@ -235,6 +236,90 @@
   @media (prefers-reduced-motion: no-preference) {
     .doc input::after { transition: transform .12s ease-out; }
   }
+
+  /* ---------- "o que falta", em letra grande, para o candidato fotografar */
+  .folga { margin-top: 12px; }
+  .lembrete { position: fixed; inset: 0; z-index: 56; background: var(--papel); overflow: auto; padding: 22px 18px 28px; }
+  .lem-tela { max-width: 560px; margin: 0 auto; font-size: 19px; line-height: 1.35; }
+  .lem-tela h1 { margin: 0; font-size: 24px; font-weight: 650; line-height: 1.2; }
+  .lem-tela h2 { margin: 18px 0 4px; font-size: 19px; font-weight: 650; border-bottom: 2px solid var(--tinta); padding-bottom: 3px; }
+  .lem-tela p { margin: 8px 0; }
+  .lem-tela .lem-sub { color: var(--suave); font-size: 16px; margin-top: 2px; }
+  .lem-tela .lem-nome { font-weight: 650; border: 1.5px solid var(--linha-forte); padding: 8px 10px; overflow-wrap: anywhere; }
+  .lem-tela ul { margin: 0; padding: 0 0 0 22px; }
+  .lem-tela li { padding: 3px 0; }
+  .lem-tela .lem-aviso { font-weight: 650; margin-top: 16px; }
+  .lem-tela .acoes { margin-top: 18px; }
+
+  /* ---------- impressão: controles (só na tela) e folhas (prévia na tela, e o que vai para o papel) */
+  .impressao { position: fixed; inset: 0; z-index: 55; background: var(--mesa); overflow: auto; }
+  .imp-controles { background: var(--papel); border-bottom: 1px solid var(--linha-forte); padding: 12px 16px 14px; }
+  .imp-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .imp-topo h2 { margin: 0; font-size: 19px; font-weight: 650; }
+  .imp-modos { display: flex; gap: 8px; flex-wrap: wrap; }
+  .imp-opcoes { margin-top: 12px; max-width: 880px; }
+  .imp-opcoes p { margin: 0 0 8px; color: var(--suave); }
+  .imp-linha { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin: 0 0 8px; }
+  .imp-linha input[type="search"] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 180px; max-width: 320px; padding: 8px 10px; border: 1.5px solid var(--linha-forte); border-radius: 4px; background: #fff; font-size: 16px; }
+  .imp-linha input[type="number"] { width: 78px; padding: 7px 8px; border: 1.5px solid var(--linha-forte); border-radius: 4px; background: #fff; font-size: 16px; }
+  .imp-chave, .imp-cota { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  .imp-chave input, .imp-pessoa input { width: 20px; height: 20px; margin: 0; flex: none; }
+  .imp-grupo { margin: 10px 0 4px; font-weight: 650; font-size: 14px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .imp-grupo button { background: none; border: 0; color: var(--foco); padding: 0; font-size: 13px; font-weight: 400; text-decoration: underline; }
+  .imp-pessoas { max-height: 30vh; overflow: auto; border: 1px solid var(--linha); border-radius: 4px; background: #fff; }
+  .imp-pessoa { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--linha); cursor: pointer; }
+  .imp-pessoa:last-child { border-bottom: 0; }
+  .imp-pessoa small { display: block; color: var(--suave); font-size: 13px; }
+  .imp-confirma { margin: 12px 0 0; padding: 10px 12px; background: var(--ocre-fundo); border: 1.5px solid var(--ocre); border-radius: 4px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-weight: 600; }
+  .previa { padding: 14px; overflow: auto; }
+  .previa > p { margin: 0 auto 8px; width: 210mm; max-width: 100%; color: var(--suave); font-size: 13px; }
+  #folhas { width: 210mm; padding: 10mm; margin: 0 auto; background: #fff; color: #000; border: 1px solid var(--linha-forte); font-family: Arial, Helvetica, sans-serif; font-size: 8.5pt; line-height: 1.22; }
+  #folhas p { margin: 0; font-size: 10pt; }
+  .par { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3mm; margin: 0 0 3mm; break-inside: avoid; page-break-inside: avoid; }
+  .tira, .lem { border: 0.3mm solid #000; padding: 2.4mm 3mm 2mm; background: #fff; color: #000; }
+  .lem { margin: 0 0 3mm; break-inside: avoid; page-break-inside: avoid; }
+  .fantasma { visibility: hidden; }
+  .tira .t1 { display: flex; justify-content: space-between; gap: 3mm; font-size: 7.5pt; }
+  .tira .t2 { display: flex; justify-content: space-between; gap: 3mm; font-weight: 700; font-size: 9pt; margin-top: 0.4mm; }
+  .tira .nome, .lem-nome { border: 0.2mm solid #000; padding: 1.1mm 1.6mm; margin: 1.4mm 0 0.8mm; font-weight: 700; font-size: 9.5pt; overflow-wrap: anywhere; }
+  .tira .nome.em-branco, .lem-nome { font-weight: 400; font-size: 8pt; padding-bottom: 5mm; }
+  .tira ul, .lem ul { list-style: none; margin: 0; padding: 0; }
+  .tira li, .lem li { display: grid; grid-template-columns: 3.4mm minmax(0, 1fr); gap: 1.7mm; align-items: start; padding: 0.8mm 0; border-bottom: 0.15mm solid #888; }
+  .tira li:last-child { border-bottom: 0; }
+  .cx { width: 3.3mm; height: 3.3mm; border: 0.3mm solid #000; margin-top: 0.1mm; display: flex; align-items: center; justify-content: center; }
+  .cx.sim::after { content: ""; width: 1.8mm; height: 0.9mm; border: solid #000; border-width: 0 0 0.45mm 0.45mm; transform: translateY(-0.25mm) rotate(-45deg); }
+  .tira small { display: block; font-size: 7.5pt; }
+  .lem-topo { display: flex; justify-content: space-between; align-items: stretch; gap: 5mm; }
+  .lem-tit { font-weight: 700; font-size: 10.5pt; }
+  .lem-sub { font-size: 7.5pt; }
+  .lem-nome { flex: 1; max-width: 105mm; margin: 0; padding-bottom: 4mm; }
+  .lem-intro { margin-top: 1.4mm; }
+  .lem-bloco { font-weight: 700; border-bottom: 0.3mm solid #000; margin: 1.6mm 0 0; padding-bottom: 0.4mm; }
+  .lem ul { column-count: 2; column-gap: 6mm; }
+  .lem li { break-inside: avoid; page-break-inside: avoid; }
+  .lem-fim { display: flex; justify-content: space-between; align-items: baseline; gap: 2mm 6mm; flex-wrap: wrap; margin-top: 1.8mm; }
+  .lem-fim strong { font-weight: 700; }
+  .lem-fim span { font-size: 7.5pt; }
+  .lp-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 6mm; margin-bottom: 2mm; font-size: 8.5pt; }
+  .lp-cab strong { font-size: 12pt; }
+  .lp { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .lp col.c1 { width: 27%; } .lp col.c2 { width: 25%; } .lp col.c3 { width: 20%; } .lp col.c4 { width: 20%; } .lp col.c5 { width: 8%; }
+  .lp th, .lp td { border: 0.2mm solid #000; padding: 1mm 1.4mm; text-align: left; vertical-align: top; overflow-wrap: anywhere; font-weight: 400; }
+  .lp th, .lp strong { font-weight: 700; }
+  .lp thead { display: table-header-group; }
+  .lp tr { break-inside: avoid; page-break-inside: avoid; }
+  .lp tr.curso td { font-weight: 700; border-left: 0; border-right: 0; padding-top: 2.4mm; }
+  .lp small { display: block; font-size: 7.5pt; }
+  @page { size: A4; margin: 10mm; }
+  /* no papel, com a tela de impressão aberta, sai só o conteúdo das folhas (sem fundos: só linhas e texto) */
+  @media print {
+    body.imprimindo { display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; }
+    body.imprimindo > *:not(#impressao) { display: none !important; }
+    body.imprimindo > #impressao { position: static !important; overflow: visible !important; background: #fff !important; }
+    body.imprimindo .imp-controles, body.imprimindo .previa > p { display: none !important; }
+    body.imprimindo .previa { padding: 0 !important; overflow: visible !important; }
+    body.imprimindo #folhas { width: auto !important; padding: 0 0.4mm 0 0 !important; margin: 0 !important; border: 0 !important; }   /* a folga evita cortar a borda direita */
+  }
 </style>
 </head>
 <body>
@@ -248,6 +333,7 @@
   </div>
   <div id="menu" class="menu" hidden>
     <button type="button" data-acao="atualizar">Atualizar agora</button>
+    <button type="button" data-acao="imprimir" id="menu-imprimir" hidden>Imprimir…</button>
     <button type="button" data-acao="trocar">Trocar nome ou código</button>
     <button type="button" data-acao="link">Copiar link para a equipe</button>
     <button type="button" data-acao="sair">Sair deste aparelho</button>
@@ -299,6 +385,9 @@
     </div>
   </form>
 </div>
+
+<div id="impressao" class="impressao" aria-label="Imprimir" hidden></div>
+<div id="lembrete" class="lembrete" aria-label="Documentos a entregar" hidden></div>
 
 <div id="avisos" class="avisos" aria-live="polite"></div>
 <noscript><p style="padding:24px">Esta página precisa de JavaScript para funcionar.</p></noscript>
@@ -462,7 +551,7 @@ const ATRASO_CLIQUE = 350;        // junta cliques seguidos na mesma pessoa numa
 const ATRASO_TEXTO = 1500;        // espera a pessoa parar de digitar
 const LIMITE = 30000;             // desiste de um pedido sem resposta
 const GUARDADO = 'prematricula:aparelho';
-const VERSAO_DA_TELA = 1;
+const VERSAO_DA_TELA = 2;
 const ROTULO_COTA = {
   AC: 'ampla concorrência',
   LB_PPI: 'baixa renda, pretos, pardos e indígenas', LB_Q: 'baixa renda, quilombolas', LB_PCD: 'baixa renda, pessoas com deficiência', LB_EP: 'baixa renda, escola pública',
@@ -517,7 +606,7 @@ function lerGuardado() {
 }
 function guardar() {
   try {
-    localStorage.setItem(GUARDADO, JSON.stringify({ ponte: estado.ponte, codigo: estado.codigo, nome: estado.nome, curso: estado.curso }));
+    localStorage.setItem(GUARDADO, JSON.stringify({ ponte: estado.ponte, codigo: estado.codigo, nome: estado.nome, curso: estado.curso, pendencias: imp.pendencias }));
     return true;
   } catch (e) { return false; }
 }
@@ -772,7 +861,7 @@ function desenhar() {
     desenhoPendente = false;
     const foco = document.activeElement && document.activeElement.getAttribute ? document.activeElement.getAttribute('data-foco') : null;
     desenharTopo();
-    if (estado.config) { desenharLista(); desenharFicha(); }
+    if (estado.config) { desenharLista(); desenharFicha(); desenharImpressao(); }
     if (foco && (!document.activeElement || document.activeElement.getAttribute('data-foco') !== foco)) {
       const alvo = document.querySelector('[data-foco="' + foco.replace(/["\\]/g, '') + '"]');
       if (alvo) alvo.focus({ preventScroll: true });
@@ -801,6 +890,7 @@ function desenharTopo() {
   quem.hidden = !estado.nome || !cfg;
   quem.textContent = estado.nome;
   $('versoes').textContent = 'Tela versão ' + VERSAO_DA_TELA + (cfg ? ', planilha versão ' + cfg.versao : '');
+  $('menu-imprimir').hidden = !(cfg && Number(cfg.versao) >= 8);        // a impressão precisa do que a planilha guarda desde a versão 8
 
   const faixa = $('faixa');
   if (estado.falha) {
@@ -977,6 +1067,10 @@ function desenharFicha() {
   if (v.depois) {
     resumo.push(el('div', { class: 'depois-lista' }, el('p', { class: 'resumo-titulo' }, 'Entregar depois ', cfg.prazoDepois ? el('small', { text: '(até ' + cfg.prazoDepois + ')' }) : null),
       el('ul', { class: 'resumo' }, itensDe(v.depois))));
+  }
+  if (v.pend || v.depois) {
+    resumo.push(el('div', { class: 'acoes folga' }, el('button', { class: 'botao pequeno', type: 'button', 'data-foco': 'mostrar-falta', text: 'Mostrar o que falta',
+      title: 'Abre a lista do que falta em letra grande, para o candidato fotografar', onclick: function () { mostrarFalta(insc); } })));
   }
   if (!v.pend && tipo === 'concluida') resumo.push(el('p', { class: 'tudo-certo', text: v.depois ? 'Pré-matrícula concluída, com documento a entregar depois.' : 'Pré-matrícula concluída. Nada pendente.' }));
   pecas.blocoResumo.hidden = !resumo.length;
@@ -1239,6 +1333,7 @@ function ligarEventos() {
     if (acao === 'atualizar') { estado.semResposta = 0; consultar(true); avisar('Atualizando a lista…'); }
     if (acao === 'trocar') mostrarEntrada({ podeCancelar: true, manterCodigo: true, texto: 'Troque o nome ou o código da equipe:' });
     if (acao === 'link') linkDaEquipe();
+    if (acao === 'imprimir') abrirImpressao();
     if (acao === 'sair') {
       if (temPendencia() && !window.confirm('Há marcações que ainda não foram salvas. Sair assim mesmo?')) return;
       esquecer();
@@ -1248,7 +1343,9 @@ function ligarEventos() {
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
-      if (!menu.hidden) fecharMenu();
+      if (!$('lembrete').hidden) $('lembrete').hidden = true;
+      else if (!$('impressao').hidden) fecharImpressao();
+      else if (!menu.hidden) fecharMenu();
       else if (estado.painelMotivo) { estado.painelMotivo = false; desenhar(); }
       else if (estado.aberto && window.matchMedia('(max-width: 899px)').matches) fechar(false);
     }
@@ -1275,6 +1372,7 @@ function partida() {
   estado.codigo = typeof g.codigo === 'string' ? g.codigo : '';
   estado.nome = typeof g.nome === 'string' ? g.nome : '';
   estado.curso = typeof g.curso === 'string' ? g.curso : '';
+  imp.pendencias = g.pendencias === true;
 
   // endereço da ponte vindo no link, depois do "#": vale mais que o guardado, e some da barra de endereço
   const m = /[#&]p=([^&]+)/.exec(location.hash || '');
@@ -1318,6 +1416,411 @@ function carregarInicio() {
       temporizadorConsulta = setTimeout(carregarInicio, 6000);
     }
   });
+}
+
+/* ====================================================================== */
+/* 8. Impressão (pede a planilha na versão 8): tiras do checklist, lista   */
+/*    de pendências, lembretes e tiras em branco; "o que falta" na tela    */
+/* ====================================================================== */
+const MODOS = [['tiras', 'Tiras do checklist'], ['pendencias', 'Lista de pendências'], ['lembretes', 'Lembretes em branco'], ['brancas', 'Tiras em branco']];
+const GRUPOS_DE_TIRAS = [['nova', 'Novas'], ['mudou', 'Mudaram desde a última impressão'], ['igual', 'Já impressas'], ['indeferida', 'Indeferidas (só entram se você marcar)']];
+const imp = { modo: 'tiras', escolhidos: {}, pendencias: false, filtro: '', impressos: null, enviando: false, erro: '', lembretes: 6, brancas: null };
+const impPecas = {};
+
+function minuscula(t) { return t.length > 1 && t.charAt(1) === t.charAt(1).toLowerCase() ? t.charAt(0).toLowerCase() + t.slice(1) : t; }
+function semProvisorio(t) { return t.replace(/\s*\(provis[óo]rio\)\s*$/i, ''); }
+function doisDigitos(n) { return ('0' + n).slice(-2); }
+function hoje() {
+  const d = new Date();
+  return doisDigitos(d.getDate()) + '/' + doisDigitos(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + doisDigitos(d.getHours()) + ':' + doisDigitos(d.getMinutes());
+}
+function rotuloDaCota(cota) { return cota === 'AC' ? 'Ampla concorrência' : (cota ? 'Cota ' + cota : ''); }
+function doProcesso(cfg) {
+  return ['IFCE' + (cfg.campus ? ' campus ' + cfg.campus : ''), cfg.edital ? 'Edital ' + cfg.edital : ''].join(cfg.edital ? ' · ' : '');
+}
+/** Ordem das pastas físicas: por curso (na ordem da aba Config) e, dentro dele, por nome. */
+function porCursoENome(cfg) {
+  const cursos = cfg.cursos.map(function (c) { return c.nome; });
+  const pos = function (c) { const i = cursos.indexOf(c); return i < 0 ? 999 : i; };
+  return function (a, b) { return (pos(a.curso) - pos(b.curso)) || a.curso.localeCompare(b.curso, 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR'); };
+}
+
+/**
+ * Linhas da tira de uma pessoa: [{ texto, marcado, nota }]. Segue a ficha: só os documentos que valem para ela, na
+ * ordem da aba Regras. Grupo "basta um" vira uma linha (o que foi entregue; se nada, o nome do grupo). Provisório só
+ * aparece se foi entregue, logo abaixo do documento que ele cobre.
+ */
+function linhasDaTira(cfg, v) {
+  const regras = Logica.regrasDe(cfg, v.docs);
+  const vale = {};
+  regras.forEach(function (r) { vale[r.codigo] = r; });
+  const provisorio = {}, abaixoDe = {};
+  regras.forEach(function (r) {
+    const cobertos = r.cobre.filter(function (c) { return vale[c]; });
+    if (!cobertos.length) return;
+    provisorio[r.codigo] = true;
+    let ultimo = '';
+    regras.forEach(function (x) { if (cobertos.indexOf(x.codigo) >= 0) ultimo = x.codigo; });
+    (abaixoDe[ultimo] = abaixoDe[ultimo] || []).push(r);
+  });
+  const grupos = {};
+  regras.forEach(function (r) { if (r.grupo && !provisorio[r.codigo]) (grupos[r.grupo] = grupos[r.grupo] || []).push(r); });
+  const falta = 'Falta' + (cfg.prazoPend ? ', prazo até ' + cfg.prazoPend : '');
+  const depois = cfg.prazoDepois ? 'Entregar até ' + cfg.prazoDepois : 'Entregar depois';
+  const linhas = [], vistos = {};
+  regras.forEach(function (r) {
+    if (provisorio[r.codigo]) return;
+    const g = r.grupo ? grupos[r.grupo] : null;
+    if (g && g.length > 1) {
+      if (!vistos[r.grupo]) {
+        vistos[r.grupo] = true;
+        const entregues = g.filter(function (x) { return v.docs[x.codigo]; });
+        if (entregues.length) {
+          entregues.forEach(function (x) { linhas.push({ texto: x.documento, marcado: true, nota: '' }); });
+        } else {
+          const coberto = g.some(function (x) { return v.cobertos[x.codigo]; }), conta = g.some(function (x) { return x.conta; });
+          linhas.push({ texto: r.grupo + ': ' + g.map(function (x) { return minuscula(x.documento); }).join(' ou '), marcado: false, nota: coberto ? depois : (conta ? falta : '') });
+        }
+      }
+    } else {
+      const marcado = !!v.docs[r.codigo];
+      linhas.push({ texto: r.documento, marcado: marcado, nota: marcado ? '' : (v.cobertos[r.codigo] ? depois : (r.conta ? falta : '')) });
+    }
+    (abaixoDe[r.codigo] || []).forEach(function (p) {
+      if (v.docs[p.codigo]) linhas.push({ texto: semProvisorio(p.documento), marcado: true, nota: 'Provisório' });
+    });
+  });
+  return linhas;
+}
+
+/** Linhas de uma tira em branco: todos os documentos da cota, com a condição de cada um, para marcar à mão. */
+function linhasEmBranco(cfg, cota) {
+  return cfg.regras.filter(function (r) { return (r.cotas || []).indexOf(cota) >= 0; }).map(function (r) {
+    const notas = [];
+    if (r.vale && Logica.chave(r.vale) !== 'todos') notas.push(r.vale);
+    if (r.cobre.length) notas.push('Provisório');
+    if (r.grupo) notas.push(r.grupo + ': basta um');
+    return { texto: semProvisorio(r.documento), marcado: false, nota: notas.join(' · ') };
+  });
+}
+
+function elLinhas(linhas) {
+  return el('ul', {}, linhas.map(function (l) {
+    return el('li', {}, el('span', { class: 'cx' + (l.marcado ? ' sim' : '') }), el('span', {}, l.texto, l.nota ? el('small', { text: l.nota }) : null));
+  }));
+}
+/** Uma tira. "nome" nulo faz a tira em branco. */
+function elTira(cfg, cota, nome, data, linhas) {
+  return el('div', { class: 'tira' },
+    el('div', { class: 't1' }, el('span', { text: 'Documentação para pré-matrícula' }), el('span', { text: data })),
+    el('div', { class: 't2' }, el('span', { text: cfg.modalidade || '' }), el('span', { text: rotuloDaCota(cota) })),
+    el('div', { class: 'nome' + (nome === null ? ' em-branco' : ''), text: nome === null ? 'Candidato(a):' : nome }),
+    elLinhas(linhas));
+}
+/** Duas por linha, cada par com a mesma altura, para o corte ser reto. Um par nunca é dividido entre páginas. */
+function emPares(itens) {
+  const pares = [];
+  for (let i = 0; i < itens.length; i += 2) pares.push(el('div', { class: 'par' }, itens[i], itens[i + 1] || el('div', { class: 'fantasma' })));
+  return pares;
+}
+
+/* ---------- lembrete em papel (marcado à mão) e lista de pendências */
+function dadosDoLembrete(cfg) {
+  const usados = {};
+  Object.keys(estado.candidatos).forEach(function (i) { Object.keys(estado.candidatos[i].docs).forEach(function (k) { usados[k] = true; }); });
+  const regras = cfg.regras.filter(function (r) { return usados[r.codigo]; });     // só o que vale para alguém da planilha
+  const vale = {};
+  regras.forEach(function (r) { vale[r.codigo] = r; });
+  const ehProvisorio = function (r) { return r.cobre.some(function (c) { return vale[c]; }); };
+  const definitivo = {};
+  regras.forEach(function (r) { r.cobre.forEach(function (c) { if (vale[c]) definitivo[c] = true; }); });
+  const agora = [], vistos = {};
+  regras.forEach(function (r) {
+    if (ehProvisorio(r)) return;
+    if (r.grupo) {
+      if (vistos[r.grupo]) return;
+      vistos[r.grupo] = true;
+      const membros = regras.filter(function (x) { return x.grupo === r.grupo && !ehProvisorio(x); });
+      if (!membros.some(function (x) { return x.conta; })) return;
+      agora.push(membros.length > 1 ? r.grupo + ': ' + membros.map(function (x) { return minuscula(x.documento); }).join(' ou ') : r.documento);
+    } else if (r.conta) {
+      agora.push(r.documento);
+    }
+  });
+  return { agora: agora, depois: regras.filter(function (r) { return definitivo[r.codigo]; }).map(function (r) { return r.documento; }) };
+}
+function elLembrete(cfg, d) {
+  const caixa = function (t) { return el('li', {}, el('span', { class: 'cx' }), el('span', { text: t })); };
+  return el('div', { class: 'lem' },
+    el('div', { class: 'lem-topo' },
+      el('div', {}, el('div', { class: 'lem-tit', text: 'Pré-matrícula: documentos a entregar' }), el('div', { class: 'lem-sub', text: doProcesso(cfg) })),
+      el('div', { class: 'lem-nome', text: 'Candidato(a):' })),
+    el('div', { class: 'lem-intro', text: 'Para efetivar sua pré-matrícula, entregue na CCA os documentos marcados.' }),
+    el('div', { class: 'lem-bloco', text: cfg.prazoPend ? 'Até ' + cfg.prazoPend : 'Documentos' }),
+    el('ul', {}, d.agora.map(caixa), caixa('Outro:')),
+    d.depois.length ? [el('div', { class: 'lem-bloco', text: (cfg.prazoDepois ? 'Até ' + cfg.prazoDepois : 'Depois') + ', para quem entregou documento provisório' }), el('ul', {}, d.depois.map(caixa))] : null,
+    el('div', { class: 'lem-fim' }, el('strong', { text: 'Sem a entrega no prazo, a matrícula não poderá ser efetivada.' }), cfg.contato ? el('span', { text: 'Dúvidas: ' + cfg.contato }) : null));
+}
+function comPendencia() {
+  return Object.keys(estado.candidatos).map(visao).filter(function (v) { return v.pend || v.depois; }).sort(porCursoENome(estado.config));
+}
+function folhaDePendencias(cfg) {
+  const gente = comPendencia();
+  const itens = function (t) { return t.split('; ').filter(function (x) { return x; }).map(function (x) { return el('div', { text: x }); }); };
+  const corpo = [];
+  let curso = null;
+  gente.forEach(function (v) {
+    if (v.curso !== curso) {
+      curso = v.curso;
+      const n = gente.filter(function (x) { return x.curso === curso; }).length;
+      corpo.push(el('tr', { class: 'curso' }, el('td', { colspan: '5', text: (curso || 'Sem curso') + ' (' + n + ')' })));
+    }
+    corpo.push(el('tr', { 'data-insc': v.insc },
+      el('td', {}, el('strong', { text: v.nome }), el('small', { text: [rotuloDaCota(v.cota), v.situacao].filter(function (x) { return x; }).join(' · ') })),
+      el('td', {}, itens(v.pend)), el('td', {}, itens(v.depois)),
+      el('td', {}, v.tel ? el('div', { text: v.tel }) : null, v.email ? el('div', { text: v.email }) : null),
+      el('td', {})));
+  });
+  return [
+    el('div', { class: 'lp-cab' }, el('strong', { text: 'Pendências de documentos' }), el('span', { text: doProcesso(cfg) + ' · emitida em ' + hoje() })),
+    gente.length ? el('table', { class: 'lp' },
+      el('colgroup', {}, ['c1', 'c2', 'c3', 'c4', 'c5'].map(function (c) { return el('col', { class: c }); })),
+      el('thead', {}, el('tr', {}, el('th', { text: 'Nome' }), el('th', { text: 'Falta' + (cfg.prazoPend ? ' (até ' + cfg.prazoPend + ')' : '') }),
+        el('th', { text: 'Entregar depois' + (cfg.prazoDepois ? ' (até ' + cfg.prazoDepois + ')' : '') }), el('th', { text: 'Telefone e e-mail' }), el('th', { text: 'Contato feito' }))),
+      el('tbody', {}, corpo)) : el('p', { text: 'Ninguém com pendência no momento.' })
+  ];
+}
+
+/* ---------- tiras do lote: a planilha lembra o que foi impresso de cada pessoa */
+function paraTiras() {
+  return Object.keys(estado.candidatos).map(visao).filter(function (v) {
+    if (!Object.keys(v.docs).length) return false;
+    const tipo = Logica.tipoSituacao(v.situacao);
+    return tipo === 'concluida' || tipo === 'pendencia' || Logica.classeDaSituacao(v.situacao) === 'sit-indeferida';
+  }).sort(porCursoENome(estado.config));
+}
+/** "nova": nunca impressa; "mudou": os documentos mudaram desde a impressão; "igual": a tira da pasta está em dia. */
+function grupoDaTira(v) {
+  if (Logica.tipoSituacao(v.situacao) === 'fixa') return 'indeferida';
+  const c = estado.candidatos[v.insc];
+  return !c.impresso ? 'nova' : (c.impresso === c.sinal ? 'igual' : 'mudou');
+}
+function vemMarcada(v) {
+  const g = grupoDaTira(v), tipo = Logica.tipoSituacao(v.situacao);
+  return (g === 'nova' || g === 'mudou') && (tipo === 'concluida' || (tipo === 'pendencia' && imp.pendencias));
+}
+function quantidadesEmBranco(cfg) {
+  if (!imp.brancas) {
+    const tem = {};
+    Object.keys(estado.candidatos).forEach(function (i) { if (estado.candidatos[i].cota) tem[estado.candidatos[i].cota] = true; });
+    imp.brancas = {};
+    cfg.cotas.forEach(function (cota) { imp.brancas[cota] = tem[cota] ? (cota === 'AC' ? 4 : 2) : 0; });
+  }
+  return imp.brancas;
+}
+
+function abrirImpressao() {
+  const painel = $('impressao');
+  if (!impPecas.modos) {
+    impPecas.modos = el('div', { class: 'imp-modos', role: 'group', 'aria-label': 'O que imprimir' });
+    impPecas.opcoes = el('div', { class: 'imp-opcoes' });
+    impPecas.confirma = el('div', {});
+    trocarFilhos(painel,
+      el('div', { class: 'imp-controles' },
+        el('div', { class: 'imp-topo' }, el('h2', { text: 'Imprimir' }), el('button', { class: 'botao pequeno', type: 'button', id: 'imp-fechar', text: 'Fechar', onclick: fecharImpressao })),
+        impPecas.modos, impPecas.confirma, impPecas.opcoes),
+      el('div', { class: 'previa' }, el('p', { text: 'Prévia. A divisão em páginas aparece na janela de impressão.' }), el('div', { id: 'folhas' })));
+  }
+  imp.escolhidos = {};
+  painel.hidden = false;
+  document.body.classList.add('imprimindo');
+  montarOpcoes();
+  desenharImpressao();
+  painel.scrollTop = 0;
+}
+function fecharImpressao() {
+  $('impressao').hidden = true;
+  document.body.classList.remove('imprimindo');
+}
+
+/** Monta os controles do modo escolhido. O que muda com os dados (lista de pessoas, contagem) fica em desenharImpressao. */
+function montarOpcoes() {
+  const cfg = estado.config;
+  trocarFilhos(impPecas.modos, MODOS.map(function (m) {
+    return el('button', { class: 'botao pequeno', type: 'button', 'aria-pressed': imp.modo === m[0] ? 'true' : 'false', 'data-modo': m[0], text: m[1],
+      onclick: function () { imp.modo = m[0]; montarOpcoes(); desenharImpressao(); } });
+  }));
+  const numero = function (valor, maximo, rotulo, aoMudar) {
+    const campo = el('input', { type: 'number', min: '0', max: String(maximo), step: '1', value: String(valor), inputmode: 'numeric', 'aria-label': rotulo });
+    campo.addEventListener('input', function () { aoMudar(Math.max(0, Math.min(maximo, Math.floor(Number(campo.value) || 0)))); montarFolhas(); });
+    return campo;
+  };
+  impPecas.botao = el('button', { class: 'botao principal', type: 'button', id: 'imp-botao', onclick: imprimirAgora });
+  impPecas.lista = null;
+  imp.filtro = '';
+  let partes;
+  if (imp.modo === 'tiras') {
+    const filtro = el('input', { type: 'search', placeholder: 'Filtrar por nome', 'aria-label': 'Filtrar por nome', autocomplete: 'off', spellcheck: 'false' });
+    filtro.addEventListener('input', function () { imp.filtro = filtro.value; desenharImpressao(); });
+    const chave = el('input', { type: 'checkbox', id: 'imp-pendencias', checked: imp.pendencias });
+    chave.addEventListener('change', function () { imp.pendencias = chave.checked; imp.escolhidos = {}; guardar(); desenharImpressao(); });
+    impPecas.lista = el('div', {});
+    partes = [el('p', { text: 'As tiras novas e as que mudaram desde a última impressão já vêm marcadas. Saem por curso e nome, com a data da última marcação de documento.' }),
+      el('div', { class: 'imp-linha' }, el('label', { class: 'imp-chave' }, chave, 'Incluir quem está com pendência (tira parcial)'), filtro),
+      impPecas.lista, el('div', { class: 'imp-linha folga' }, impPecas.botao)];
+  } else if (imp.modo === 'pendencias') {
+    impPecas.botao.textContent = 'Imprimir a lista';
+    partes = [el('p', { text: 'Quem ficou devendo documento, por curso e nome, com telefone, e-mail e uma coluna para anotar o contato feito. Na janela de impressão também dá para salvar em PDF.' }),
+      el('div', { class: 'imp-linha' }, impPecas.botao)];
+  } else if (imp.modo === 'lembretes') {
+    impPecas.botao.textContent = 'Imprimir os lembretes';
+    partes = [el('p', { text: 'Papel para marcar à mão o que falta e entregar ao candidato. Em geral saem dois por folha: é só cortar ao meio.' }),
+      el('div', { class: 'imp-linha' }, el('label', { class: 'imp-cota' }, 'Quantos', numero(imp.lembretes, 60, 'Quantos lembretes', function (n) { imp.lembretes = n; })), impPecas.botao)];
+  } else {
+    const quantas = quantidadesEmBranco(cfg);
+    impPecas.botao.textContent = 'Imprimir as tiras em branco';
+    partes = [el('p', { text: 'Tiras sem nome, para marcar à mão se a tela estiver fora do ar. Depois, lance as marcações na tela. Quantas de cada cota:' }),
+      el('div', { class: 'imp-linha' }, cfg.cotas.map(function (cota) {
+        return el('label', { class: 'imp-cota' }, cota, numero(quantas[cota], 60, 'Tiras em branco de ' + cota, function (n) { quantas[cota] = n; }));
+      })),
+      el('div', { class: 'imp-linha' }, impPecas.botao)];
+  }
+  trocarFilhos(impPecas.opcoes, partes);
+}
+
+function contarTiras() {
+  if (imp.modo !== 'tiras') return;
+  const n = paraTiras().filter(function (v) { return imp.escolhidos[v.insc]; }).length;
+  impPecas.botao.textContent = n === 1 ? 'Imprimir 1 tira' : 'Imprimir ' + n + ' tiras';
+  impPecas.botao.disabled = !n;
+}
+
+function desenharImpressao() {
+  if ($('impressao').hidden || !impPecas.modos || !estado.config) return;
+  // depois da janela de impressão: só com o "sim" as tiras ficam marcadas como impressas na planilha
+  trocarFilhos(impPecas.confirma, imp.impressos ? el('div', { class: 'imp-confirma', role: 'alert' },
+    el('span', { text: imp.erro || (imp.impressos.length === 1 ? 'A tira saiu certa?' : 'As ' + imp.impressos.length + ' tiras saíram certas?') }),
+    el('button', { class: 'botao principal pequeno', type: 'button', id: 'imp-sim', disabled: imp.enviando, text: imp.enviando ? 'Marcando…' : (imp.erro ? 'Tentar de novo' : 'Sim, marcar como impressas'), onclick: confirmarImpressas }),
+    el('button', { class: 'botao pequeno', type: 'button', id: 'imp-nao', disabled: imp.enviando, text: 'Não saíram', onclick: function () { imp.impressos = null; imp.erro = ''; desenharImpressao(); } })) : null);
+
+  if (imp.modo === 'tiras' && impPecas.lista) {
+    const todos = paraTiras();
+    todos.forEach(function (v) { if (!(v.insc in imp.escolhidos)) imp.escolhidos[v.insc] = vemMarcada(v); });
+    const termo = Logica.semAcento(imp.filtro);
+    const rolagens = {};
+    Array.prototype.forEach.call(impPecas.lista.querySelectorAll('.imp-pessoas'), function (x) { rolagens[x.getAttribute('data-grupo')] = x.scrollTop; });
+    const blocos = [];
+    GRUPOS_DE_TIRAS.forEach(function (g) {
+      const gente = todos.filter(function (v) { return grupoDaTira(v) === g[0] && (!termo || Logica.semAcento(v.nome).indexOf(termo) >= 0); });
+      if (!gente.length) return;
+      const todas = function (valor) { return function () { gente.forEach(function (v) { imp.escolhidos[v.insc] = valor; }); desenharImpressao(); }; };
+      blocos.push(el('div', { class: 'imp-grupo' }, g[1] + ' (' + gente.length + ')',
+        el('button', { type: 'button', text: 'marcar todas', onclick: todas(true) }), el('button', { type: 'button', text: 'desmarcar todas', onclick: todas(false) })));
+      blocos.push(el('div', { class: 'imp-pessoas', 'data-grupo': g[0] }, gente.map(function (v) {
+        const c = estado.candidatos[v.insc];
+        const caixa = el('input', { type: 'checkbox', checked: !!imp.escolhidos[v.insc], 'data-tira': v.insc });
+        caixa.addEventListener('change', function () { imp.escolhidos[v.insc] = caixa.checked; contarTiras(); montarFolhas(); });
+        return el('label', { class: 'imp-pessoa' }, caixa,
+          el('span', {}, v.nome, el('small', { text: [v.curso, rotuloDaCota(v.cota), c.impressoEm ? 'impressa em ' + c.impressoEm : ''].filter(function (x) { return x; }).join(' · ') })),
+          el('span', { class: 'selo ' + Logica.classeDaSituacao(v.situacao), text: v.situacao }));
+      })));
+    });
+    if (!blocos.length) blocos.push(el('p', { text: todos.length ? 'Ninguém com esse nome entre os atendidos.' : 'Ainda não há ninguém atendido para imprimir.' }));
+    trocarFilhos(impPecas.lista, blocos);
+    Array.prototype.forEach.call(impPecas.lista.querySelectorAll('.imp-pessoas'), function (x) { const y = rolagens[x.getAttribute('data-grupo')]; if (y) x.scrollTop = y; });
+    contarTiras();
+  }
+  montarFolhas();
+}
+
+/** Preenche as folhas: é a prévia na tela e exatamente o que vai para o papel. */
+function montarFolhas() {
+  const cfg = estado.config, folhas = $('folhas');
+  if (!folhas || !cfg) return;
+  let conteudo;
+  if (imp.modo === 'tiras') {
+    const lote = paraTiras().filter(function (v) { return imp.escolhidos[v.insc]; });
+    conteudo = lote.length ? emPares(lote.map(function (v) { return elTira(cfg, v.cota, v.nome, v.docsEm || '', linhasDaTira(cfg, v)); })) : [el('p', { text: 'Nenhuma tira marcada.' })];
+  } else if (imp.modo === 'pendencias') {
+    conteudo = folhaDePendencias(cfg);
+  } else if (imp.modo === 'lembretes') {
+    const d = dadosDoLembrete(cfg), itens = [];
+    for (let i = 0; i < imp.lembretes; i++) itens.push(elLembrete(cfg, d));
+    conteudo = itens.length ? itens : [el('p', { text: 'Informe quantos lembretes.' })];
+  } else {
+    const quantas = quantidadesEmBranco(cfg), itens = [];
+    cfg.cotas.forEach(function (cota) {
+      for (let i = 0; i < (quantas[cota] || 0); i++) itens.push(elTira(cfg, cota, null, '____/____/______', linhasEmBranco(cfg, cota)));
+    });
+    conteudo = itens.length ? emPares(itens) : [el('p', { text: 'Informe quantas tiras de cada cota.' })];
+  }
+  trocarFilhos(folhas, conteudo);
+}
+
+function imprimirAgora() {
+  if (temPendencia()) { avisar('Espere as marcações serem salvas ("Tudo salvo") antes de imprimir.'); return; }
+  if (imp.modo === 'tiras') {
+    const lote = paraTiras().filter(function (v) { return imp.escolhidos[v.insc]; });
+    if (!lote.length) { avisar('Marque pelo menos uma tira.'); return; }
+    // guarda o que cada tira mostra agora: é isso que a planilha vai registrar como impresso
+    imp.impressos = lote.map(function (v) { return { insc: v.insc, sinal: estado.candidatos[v.insc].sinal }; });
+    imp.erro = '';
+  }
+  desenharImpressao();
+  setTimeout(function () { window.print(); }, 60);
+}
+
+function confirmarImpressas() {
+  const tiras = imp.impressos;
+  if (!tiras || imp.enviando) return;
+  imp.enviando = true; imp.erro = '';
+  desenharImpressao();
+  chamar({ acao: 'imprimiu', atendente: estado.nome, tiras: tiras }).then(function (r) {
+    imp.enviando = false;
+    if (r.ok) {
+      (r.candidatos || []).forEach(function (c) { estado.candidatos[c.insc] = c; estado.gravadoEm[c.insc] = Date.now(); imp.escolhidos[c.insc] = false; });
+      imp.impressos = null;
+      avisar(tiras.length === 1 ? 'Tira marcada como impressa.' : tiras.length + ' tiras marcadas como impressas.');
+    } else if (r.erro === 'codigo' || r.erro === 'sem_codigo') {
+      pedirEntrada(r.mensagem);
+    } else {
+      imp.erro = (r.erro === 'rede' ? 'Sem conexão: a planilha ainda não sabe que as tiras saíram.' : (r.mensagem || 'A planilha não registrou a impressão.'));
+    }
+    desenhar();
+  });
+}
+
+/* ---------- "o que falta", na tela, para o candidato fotografar */
+function mostrarFalta(insc) {
+  const cfg = estado.config, v = visao(insc);
+  if (!v) return;
+  const itens = function (t) { return t.split('; ').filter(function (x) { return x; }); };
+  const agora = itens(v.pend), depois = itens(v.depois);
+  const aviso = 'Sem a entrega no prazo, a matrícula não poderá ser efetivada.';
+  const tituloAgora = cfg.prazoPend ? 'Até ' + cfg.prazoPend : 'O que falta', tituloDepois = cfg.prazoDepois ? 'Até ' + cfg.prazoDepois : 'Entregar depois';
+  const texto = ['Pré-matrícula: documentos a entregar', doProcesso(cfg), v.nome, '', 'Para efetivar sua pré-matrícula, entregue na CCA:']
+    .concat(agora.length ? ['', tituloAgora + ':'].concat(agora.map(function (x) { return '- ' + x; })) : [])
+    .concat(depois.length ? ['', tituloDepois + ':'].concat(depois.map(function (x) { return '- ' + x; })) : [])
+    .concat(['', aviso]).concat(cfg.contato ? ['Dúvidas: ' + cfg.contato] : []).join('\n');
+  const lista = function (titulo, coisas) { return coisas.length ? [el('h2', { text: titulo }), el('ul', {}, coisas.map(function (x) { return el('li', { text: x }); }))] : null; };
+  const painel = $('lembrete');
+  const fechar = function () { painel.hidden = true; };
+  trocarFilhos(painel, el('div', { class: 'lem-tela' },
+    el('h1', { text: 'Pré-matrícula: documentos a entregar' }),
+    el('p', { class: 'lem-sub', text: doProcesso(cfg) }),
+    el('p', { class: 'lem-nome', text: v.nome }),
+    el('p', { text: 'Para efetivar sua pré-matrícula, entregue na CCA:' }),
+    lista(tituloAgora, agora), lista(tituloDepois, depois),
+    el('p', { class: 'lem-aviso', text: aviso }),
+    cfg.contato ? el('p', { text: 'Dúvidas: ' + cfg.contato }) : null,
+    el('div', { class: 'acoes' },
+      el('button', { class: 'botao', type: 'button', id: 'lem-copiar', text: 'Copiar o texto', onclick: function () {
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(function () { avisar('Texto copiado.'); }, function () { avisar('Não consegui copiar. O candidato pode fotografar a tela.'); });
+        else avisar('Este navegador não deixa copiar. O candidato pode fotografar a tela.');
+      } }),
+      el('button', { class: 'botao principal', type: 'button', id: 'lem-fechar', text: 'Fechar', onclick: fechar }))));
+  painel.hidden = false;
+  painel.scrollTop = 0;
 }
 
 partida();
