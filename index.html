@@ -9,7 +9,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https: http://localhost:* http://127.0.0.1:*; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Pré-matrícula</title>
 <!--
-  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 2 (para o controle_base.gs versão 4 ou mais nova;
+  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 3 (para o controle_base.gs versão 4 ou mais nova;
   a impressão das tiras do checklist só aparece com a planilha na versão 8)
 
   Página única, sem bibliotecas e sem dados: nomes, regras e situações vêm da planilha, pela ponte
@@ -237,6 +237,13 @@
     .doc input::after { transition: transform .12s ease-out; }
   }
 
+  /* ---------- três barras no botão do nome (ali fica o menu) e botão "Imprimir" no topo, só em tela larga */
+  .quem::before { content: ""; display: inline-block; width: 15px; height: 12px; margin-right: 8px; vertical-align: -1px;
+    background: linear-gradient(currentColor, currentColor) top / 100% 2px no-repeat, linear-gradient(currentColor, currentColor) center / 100% 2px no-repeat,
+      linear-gradient(currentColor, currentColor) bottom / 100% 2px no-repeat; }
+  .imprimir-topo::before { display: none; }
+  @media (max-width: 899px) { .imprimir-topo { display: none !important; } }
+
   /* ---------- "o que falta", em letra grande, para o candidato fotografar */
   .folga { margin-top: 12px; }
   .lembrete { position: fixed; inset: 0; z-index: 56; background: var(--papel); overflow: auto; padding: 22px 18px 28px; }
@@ -276,15 +283,21 @@
   #folhas { width: 210mm; padding: 10mm; margin: 0 auto; background: #fff; color: #000; border: 1px solid var(--linha-forte); font-family: Arial, Helvetica, sans-serif; font-size: 8.5pt; line-height: 1.22; }
   #folhas p { margin: 0; font-size: 10pt; }
   .par { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3mm; margin: 0 0 3mm; break-inside: avoid; page-break-inside: avoid; }
-  .tira, .lem { border: 0.3mm solid #000; padding: 2.4mm 3mm 2mm; background: #fff; color: #000; }
-  .lem { margin: 0 0 3mm; break-inside: avoid; page-break-inside: avoid; }
+  .tira, .lem { border: 0.3mm solid #000; padding: 2mm 3mm 1.6mm; background: #fff; color: #000; }
+  .lem { font-size: 8pt; padding: 1.8mm 3mm 1.4mm; break-inside: avoid; page-break-inside: avoid; }
+  .lem + .lem { margin-top: 3mm; }
   .fantasma { visibility: hidden; }
   .tira .t1 { display: flex; justify-content: space-between; gap: 3mm; font-size: 7.5pt; }
-  .tira .t2 { display: flex; justify-content: space-between; gap: 3mm; font-weight: 700; font-size: 9pt; margin-top: 0.4mm; }
+  .tira .t2 { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 3mm; font-weight: 700; font-size: 9pt; margin-top: 0.4mm; }
+  .tira .t2 > span:last-child { margin-left: auto; }             /* a cota fica sempre à direita, mesmo se descer de linha */
+  .tira .risco { display: inline-block; width: 30mm; border-bottom: 0.25mm solid #000; }
   .tira .nome, .lem-nome { border: 0.2mm solid #000; padding: 1.1mm 1.6mm; margin: 1.4mm 0 0.8mm; font-weight: 700; font-size: 9.5pt; overflow-wrap: anywhere; }
   .tira .nome.em-branco, .lem-nome { font-weight: 400; font-size: 8pt; padding-bottom: 5mm; }
   .tira ul, .lem ul { list-style: none; margin: 0; padding: 0; }
-  .tira li, .lem li { display: grid; grid-template-columns: 3.4mm minmax(0, 1fr); gap: 1.7mm; align-items: start; padding: 0.8mm 0; border-bottom: 0.15mm solid #888; }
+  .tira li, .lem li { display: grid; grid-template-columns: 3.4mm minmax(0, 1fr) auto; gap: 1.7mm; align-items: start; padding: 0.55mm 0; border-bottom: 0.15mm solid #888; }
+  .lem li { padding: 0.5mm 0; }
+  .tira em { font-style: normal; font-size: 7.5pt; }
+  .tira .prov { display: flex; align-items: center; gap: 1.2mm; font-size: 7.5pt; white-space: nowrap; }
   .tira li:last-child { border-bottom: 0; }
   .cx { width: 3.3mm; height: 3.3mm; border: 0.3mm solid #000; margin-top: 0.1mm; display: flex; align-items: center; justify-content: center; }
   .cx.sim::after { content: ""; width: 1.8mm; height: 0.9mm; border: solid #000; border-width: 0 0 0.45mm 0.45mm; transform: translateY(-0.25mm) rotate(-45deg); }
@@ -292,18 +305,18 @@
   .lem-topo { display: flex; justify-content: space-between; align-items: stretch; gap: 5mm; }
   .lem-tit { font-weight: 700; font-size: 10.5pt; }
   .lem-sub { font-size: 7.5pt; }
-  .lem-nome { flex: 1; max-width: 105mm; margin: 0; padding-bottom: 4mm; }
-  .lem-intro { margin-top: 1.4mm; }
-  .lem-bloco { font-weight: 700; border-bottom: 0.3mm solid #000; margin: 1.6mm 0 0; padding-bottom: 0.4mm; }
+  .lem-nome { flex: 1; max-width: 105mm; margin: 0; padding-bottom: 3mm; }
+  .lem-intro { margin-top: 1mm; }
+  .lem-bloco { font-weight: 700; border-bottom: 0.3mm solid #000; margin: 1.1mm 0 0; padding-bottom: 0.3mm; }
   .lem ul { column-count: 2; column-gap: 6mm; }
   .lem li { break-inside: avoid; page-break-inside: avoid; }
-  .lem-fim { display: flex; justify-content: space-between; align-items: baseline; gap: 2mm 6mm; flex-wrap: wrap; margin-top: 1.8mm; }
+  .lem-fim { display: flex; justify-content: space-between; align-items: baseline; gap: 1mm 6mm; flex-wrap: wrap; margin-top: 1.2mm; }
   .lem-fim strong { font-weight: 700; }
   .lem-fim span { font-size: 7.5pt; }
   .lp-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 6mm; margin-bottom: 2mm; font-size: 8.5pt; }
   .lp-cab strong { font-size: 12pt; }
   .lp { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  .lp col.c1 { width: 27%; } .lp col.c2 { width: 25%; } .lp col.c3 { width: 20%; } .lp col.c4 { width: 20%; } .lp col.c5 { width: 8%; }
+  .lp col.c1 { width: 22%; } .lp col.c2 { width: 25%; } .lp col.c3 { width: 18%; } .lp col.c4 { width: 27%; } .lp col.c5 { width: 8%; }
   .lp th, .lp td { border: 0.2mm solid #000; padding: 1mm 1.4mm; text-align: left; vertical-align: top; overflow-wrap: anywhere; font-weight: 400; }
   .lp th, .lp strong { font-weight: 700; }
   .lp thead { display: table-header-group; }
@@ -329,6 +342,7 @@
   <div class="marca"><strong>Pré-matrícula</strong><span id="subtitulo"></span></div>
   <div class="topo-direita">
     <span id="rede" class="rede parada" role="status" aria-live="polite"></span>
+    <button id="botao-imprimir" class="quem imprimir-topo" type="button" hidden>Imprimir</button>
     <button id="botao-quem" class="quem" type="button" aria-haspopup="true" aria-expanded="false" hidden></button>
   </div>
   <div id="menu" class="menu" hidden>
@@ -551,7 +565,7 @@ const ATRASO_CLIQUE = 350;        // junta cliques seguidos na mesma pessoa numa
 const ATRASO_TEXTO = 1500;        // espera a pessoa parar de digitar
 const LIMITE = 30000;             // desiste de um pedido sem resposta
 const GUARDADO = 'prematricula:aparelho';
-const VERSAO_DA_TELA = 2;
+const VERSAO_DA_TELA = 3;
 const ROTULO_COTA = {
   AC: 'ampla concorrência',
   LB_PPI: 'baixa renda, pretos, pardos e indígenas', LB_Q: 'baixa renda, quilombolas', LB_PCD: 'baixa renda, pessoas com deficiência', LB_EP: 'baixa renda, escola pública',
@@ -891,6 +905,7 @@ function desenharTopo() {
   quem.textContent = estado.nome;
   $('versoes').textContent = 'Tela versão ' + VERSAO_DA_TELA + (cfg ? ', planilha versão ' + cfg.versao : '');
   $('menu-imprimir').hidden = !(cfg && Number(cfg.versao) >= 8);        // a impressão precisa do que a planilha guarda desde a versão 8
+  $('botao-imprimir').hidden = $('menu-imprimir').hidden || quem.hidden;   // o mesmo atalho na barra do topo (o CSS só o mostra em tela larga)
 
   const faixa = $('faixa');
   if (estado.falha) {
@@ -941,7 +956,7 @@ function desenharLista() {
   const foraDoCurso = fora.filter(doCurso);
   if (foraDoCurso.length) {
     contadores.push(el('button', { class: 'conta fora', type: 'button', 'aria-pressed': estado.fora ? 'true' : 'false', title: 'Classificáveis e quem saiu da lista de aprovados',
-      onclick: function () { estado.fora = !estado.fora; estado.situacao = ''; desenhar(); } }, 'Fora dos aprovados', el('b', { text: String(foraDoCurso.length) })));
+      onclick: function () { estado.fora = !estado.fora; estado.situacao = ''; desenhar(); } }, rotuloDeFora(fora), el('b', { text: String(foraDoCurso.length) })));
   } else if (estado.fora) {
     estado.fora = false;
   }
@@ -1434,6 +1449,11 @@ function hoje() {
   const d = new Date();
   return doisDigitos(d.getDate()) + '/' + doisDigitos(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + doisDigitos(d.getHours()) + ':' + doisDigitos(d.getMinutes());
 }
+function cotaNaTira(cota) { return cota === 'AC' ? 'Ampla' : cota; }
+/** Rótulo do filtro de quem não é aprovado: em geral são só os classificáveis. */
+function rotuloDeFora(lista) {
+  return lista.some(function (v) { return Logica.chave(v.lista) !== 'classificavel'; }) ? 'Classificáveis e fora da lista' : 'Classificáveis';
+}
 function rotuloDaCota(cota) { return cota === 'AC' ? 'Ampla concorrência' : (cota ? 'Cota ' + cota : ''); }
 function doProcesso(cfg) {
   return ['IFCE' + (cfg.campus ? ' campus ' + cfg.campus : ''), cfg.edital ? 'Edital ' + cfg.edital : ''].join(cfg.edital ? ' · ' : '');
@@ -1493,27 +1513,46 @@ function linhasDaTira(cfg, v) {
   return linhas;
 }
 
-/** Linhas de uma tira em branco: todos os documentos da cota, com a condição de cada um, para marcar à mão. */
+/**
+ * Linhas de uma tira em branco: os documentos da cota, para marcar à mão, com a condição de cada um ao lado. Os
+ * provisórios não ganham linha (quem trouxe tudo ficaria com um quadrado vazio): o documento que aceita provisório
+ * leva um quadradinho "provisório" no fim da linha.
+ */
 function linhasEmBranco(cfg, cota) {
-  return cfg.regras.filter(function (r) { return (r.cotas || []).indexOf(cota) >= 0; }).map(function (r) {
+  const daCota = cfg.regras.filter(function (r) { return (r.cotas || []).indexOf(cota) >= 0; });
+  const codigos = {};
+  daCota.forEach(function (r) { codigos[r.codigo] = true; });
+  const ehProvisorio = function (r) { return r.cobre.some(function (c) { return codigos[c]; }); };
+  const aceita = {};
+  daCota.forEach(function (r) { if (ehProvisorio(r)) r.cobre.forEach(function (c) { aceita[c] = true; }); });
+  const QUANTOS = { 2: 'dos dois', 3: 'dos três', 4: 'dos quatro' };
+  return daCota.filter(function (r) { return !ehProvisorio(r); }).map(function (r) {
     const notas = [];
-    if (r.vale && Logica.chave(r.vale) !== 'todos') notas.push(r.vale);
-    if (r.cobre.length) notas.push('Provisório');
-    if (r.grupo) notas.push(r.grupo + ': basta um');
-    return { texto: semProvisorio(r.documento), marcado: false, nota: notas.join(' · ') };
+    if (r.vale && Logica.chave(r.vale) !== 'todos') notas.push(minuscula(r.vale));
+    if (r.grupo) {
+      const n = daCota.filter(function (x) { return x.grupo === r.grupo && !ehProvisorio(x); }).length;
+      if (n > 1) notas.push('basta um ' + (QUANTOS[n] || 'do grupo'));
+    }
+    return { texto: r.documento, marcado: false, nota: '', lado: notas.join('; '), provisorio: !!aceita[r.codigo] };
   });
 }
 
 function elLinhas(linhas) {
   return el('ul', {}, linhas.map(function (l) {
-    return el('li', {}, el('span', { class: 'cx' + (l.marcado ? ' sim' : '') }), el('span', {}, l.texto, l.nota ? el('small', { text: l.nota }) : null));
+    return el('li', {}, el('span', { class: 'cx' + (l.marcado ? ' sim' : '') }),
+      el('span', {}, l.texto, l.lado ? [' ', el('em', { text: '(' + l.lado + ')' })] : null, l.nota ? el('small', { text: l.nota }) : null),
+      l.provisorio ? el('span', { class: 'prov' }, el('span', { class: 'cx' }), 'provisório') : null);
   }));
 }
-/** Uma tira. "nome" nulo faz a tira em branco. */
-function elTira(cfg, cota, nome, data, linhas) {
+/** Uma tira. "curso" e "nome" nulos fazem a tira em branco, com os dois para preencher à mão. */
+function elTira(cfg, cota, curso, nome, data, linhas) {
+  const modalidade = cfg.modalidade || '';
+  const doCurso = curso === null
+    ? el('span', {}, modalidade ? modalidade + ' em ' : 'Curso: ', el('span', { class: 'risco' }))
+    : el('span', { text: modalidade && curso ? modalidade + ' em ' + curso : (curso || modalidade) });
   return el('div', { class: 'tira' },
     el('div', { class: 't1' }, el('span', { text: 'Documentação para pré-matrícula' }), el('span', { text: data })),
-    el('div', { class: 't2' }, el('span', { text: cfg.modalidade || '' }), el('span', { text: rotuloDaCota(cota) })),
+    el('div', { class: 't2' }, doCurso, el('span', { text: cotaNaTira(cota) })),
     el('div', { class: 'nome' + (nome === null ? ' em-branco' : ''), text: nome === null ? 'Candidato(a):' : nome }),
     elLinhas(linhas));
 }
@@ -1629,7 +1668,7 @@ function abrirImpressao() {
       el('div', { class: 'imp-controles' },
         el('div', { class: 'imp-topo' }, el('h2', { text: 'Imprimir' }), el('button', { class: 'botao pequeno', type: 'button', id: 'imp-fechar', text: 'Fechar', onclick: fecharImpressao })),
         impPecas.modos, impPecas.confirma, impPecas.opcoes),
-      el('div', { class: 'previa' }, el('p', { text: 'Prévia. A divisão em páginas aparece na janela de impressão.' }), el('div', { id: 'folhas' })));
+      el('div', { class: 'previa' }, el('p', { text: 'Prévia. A divisão em páginas aparece na janela de impressão. Nela, desmarque "cabeçalhos e rodapés" (no Firefox, em "Mais configurações"), para o endereço do site não sair no papel.' }), el('div', { id: 'folhas' })));
   }
   imp.escolhidos = {};
   painel.hidden = false;
@@ -1674,7 +1713,7 @@ function montarOpcoes() {
       el('div', { class: 'imp-linha' }, impPecas.botao)];
   } else if (imp.modo === 'lembretes') {
     impPecas.botao.textContent = 'Imprimir os lembretes';
-    partes = [el('p', { text: 'Papel para marcar à mão o que falta e entregar ao candidato. Em geral saem dois por folha: é só cortar ao meio.' }),
+    partes = [el('p', { text: 'Papel para marcar à mão o que falta e entregar ao candidato. Em geral saem três por folha: é só cortar na horizontal.' }),
       el('div', { class: 'imp-linha' }, el('label', { class: 'imp-cota' }, 'Quantos', numero(imp.lembretes, 60, 'Quantos lembretes', function (n) { imp.lembretes = n; })), impPecas.botao)];
   } else {
     const quantas = quantidadesEmBranco(cfg);
@@ -1698,7 +1737,7 @@ function contarTiras() {
 function desenharImpressao() {
   if ($('impressao').hidden || !impPecas.modos || !estado.config) return;
   // depois da janela de impressão: só com o "sim" as tiras ficam marcadas como impressas na planilha
-  trocarFilhos(impPecas.confirma, imp.impressos ? el('div', { class: 'imp-confirma', role: 'alert' },
+  trocarFilhos(impPecas.confirma, imp.impressos && imp.modo === 'tiras' ? el('div', { class: 'imp-confirma', role: 'alert' },
     el('span', { text: imp.erro || (imp.impressos.length === 1 ? 'A tira saiu certa?' : 'As ' + imp.impressos.length + ' tiras saíram certas?') }),
     el('button', { class: 'botao principal pequeno', type: 'button', id: 'imp-sim', disabled: imp.enviando, text: imp.enviando ? 'Marcando…' : (imp.erro ? 'Tentar de novo' : 'Sim, marcar como impressas'), onclick: confirmarImpressas }),
     el('button', { class: 'botao pequeno', type: 'button', id: 'imp-nao', disabled: imp.enviando, text: 'Não saíram', onclick: function () { imp.impressos = null; imp.erro = ''; desenharImpressao(); } })) : null);
@@ -1740,7 +1779,7 @@ function montarFolhas() {
   let conteudo;
   if (imp.modo === 'tiras') {
     const lote = paraTiras().filter(function (v) { return imp.escolhidos[v.insc]; });
-    conteudo = lote.length ? emPares(lote.map(function (v) { return elTira(cfg, v.cota, v.nome, v.docsEm || '', linhasDaTira(cfg, v)); })) : [el('p', { text: 'Nenhuma tira marcada.' })];
+    conteudo = lote.length ? emPares(lote.map(function (v) { return elTira(cfg, v.cota, v.curso, v.nome, v.docsEm || '', linhasDaTira(cfg, v)); })) : [el('p', { text: 'Nenhuma tira marcada.' })];
   } else if (imp.modo === 'pendencias') {
     conteudo = folhaDePendencias(cfg);
   } else if (imp.modo === 'lembretes') {
@@ -1750,7 +1789,7 @@ function montarFolhas() {
   } else {
     const quantas = quantidadesEmBranco(cfg), itens = [];
     cfg.cotas.forEach(function (cota) {
-      for (let i = 0; i < (quantas[cota] || 0); i++) itens.push(elTira(cfg, cota, null, '____/____/______', linhasEmBranco(cfg, cota)));
+      for (let i = 0; i < (quantas[cota] || 0); i++) itens.push(elTira(cfg, cota, null, null, '____/____/______', linhasEmBranco(cfg, cota)));
     });
     conteudo = itens.length ? emPares(itens) : [el('p', { text: 'Informe quantas tiras de cada cota.' })];
   }
@@ -1822,6 +1861,9 @@ function mostrarFalta(insc) {
   painel.hidden = false;
   painel.scrollTop = 0;
 }
+
+// atalho na barra do topo (só aparece em tela larga); o clique fora do menu já o fecha
+$('botao-imprimir').addEventListener('click', abrirImpressao);
 
 partida();
 })();
