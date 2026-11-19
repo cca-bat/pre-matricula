@@ -9,7 +9,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https: http://localhost:* http://127.0.0.1:*; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Pré-matrícula</title>
 <!--
-  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 3 (para o controle_base.gs versão 4 ou mais nova;
+  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 4 (para o controle_base.gs versão 4 ou mais nova;
   a impressão das tiras do checklist só aparece com a planilha na versão 8)
 
   Página única, sem bibliotecas e sem dados: nomes, regras e situações vêm da planilha, pela ponte
@@ -299,6 +299,10 @@
   .tira em { font-style: normal; font-size: 7.5pt; }
   .tira .prov { display: flex; align-items: center; gap: 1.2mm; font-size: 7.5pt; white-space: nowrap; }
   .tira li:last-child { border-bottom: 0; }
+  .tira li.basta { display: block; border: 0.2mm solid #000; padding: 0.3mm 1.4mm 0; margin: 0.7mm 0 1.1mm; }
+  .tira li.basta > em { display: block; padding: 0.3mm 0 0.1mm; }
+  .tira li.basta + li.basta { margin-top: 1.2mm; }
+  .tira li:has(+ li.basta) { border-bottom: 0; }                 /* a moldura já faz a linha de baixo */
   .cx { width: 3.3mm; height: 3.3mm; border: 0.3mm solid #000; margin-top: 0.1mm; display: flex; align-items: center; justify-content: center; }
   .cx.sim::after { content: ""; width: 1.8mm; height: 0.9mm; border: solid #000; border-width: 0 0 0.45mm 0.45mm; transform: translateY(-0.25mm) rotate(-45deg); }
   .tira small { display: block; font-size: 7.5pt; }
@@ -333,6 +337,11 @@
     body.imprimindo .previa { padding: 0 !important; overflow: visible !important; }
     body.imprimindo #folhas { width: auto !important; padding: 0 0.4mm 0 0 !important; margin: 0 !important; border: 0 !important; }   /* a folga evita cortar a borda direita */
   }
+  /* filtro por cota, ao lado da busca */
+  .linha-busca { display: flex; gap: 8px; }
+  .linha-busca #busca { flex: 1; min-width: 0; width: auto; }
+  #filtro-cota { flex: none; width: 170px; padding: 0 6px; border: 1.5px solid var(--linha-forte); border-radius: 4px; background: #fff; color: inherit; font: inherit; font-size: 14px; cursor: pointer; }
+  #filtro-cota.ativo { border-color: var(--verde, #1f7a3d); border-width: 2px; background: var(--verde-fundo, #e3f2e6); }
 </style>
 </head>
 <body>
@@ -364,7 +373,10 @@
 <main id="app" class="corpo" hidden>
   <section class="painel-lista" aria-label="Candidatos">
     <div class="filtros">
-      <input id="busca" type="search" placeholder="Buscar por nome ou inscrição" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Buscar por nome ou inscrição">
+      <div class="linha-busca">
+        <input id="busca" type="search" placeholder="Nome ou inscrição" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Buscar por nome ou inscrição">
+        <select id="filtro-cota" aria-label="Filtrar por cota" hidden></select>
+      </div>
       <div id="cursos" class="abas" role="tablist" aria-label="Curso"></div>
       <div id="contadores" class="contadores" aria-label="Situação"></div>
     </div>
@@ -565,7 +577,7 @@ const ATRASO_CLIQUE = 350;        // junta cliques seguidos na mesma pessoa numa
 const ATRASO_TEXTO = 1500;        // espera a pessoa parar de digitar
 const LIMITE = 30000;             // desiste de um pedido sem resposta
 const GUARDADO = 'prematricula:aparelho';
-const VERSAO_DA_TELA = 3;
+const VERSAO_DA_TELA = 4;
 const ROTULO_COTA = {
   AC: 'ampla concorrência',
   LB_PPI: 'baixa renda, pretos, pardos e indígenas', LB_Q: 'baixa renda, quilombolas', LB_PCD: 'baixa renda, pessoas com deficiência', LB_EP: 'baixa renda, escola pública',
@@ -928,8 +940,9 @@ function posicaoAC(outras) {
 function desenharLista() {
   const cfg = estado.config;
   const todos = Object.keys(estado.candidatos).map(visao);
-  const aprovados = todos.filter(function (v) { return v.lista === cfg.aprovado; });
-  const fora = todos.filter(function (v) { return v.lista !== cfg.aprovado; });
+  montarFiltroDeCota(todos);
+  const aprovados = todos.filter(function (v) { return v.lista === cfg.aprovado && naCota(v); });
+  const fora = todos.filter(function (v) { return v.lista !== cfg.aprovado && naCota(v); });
 
   // cursos: os da aba Config, na ordem dela, e depois qualquer outro que apareça nos dados
   const cursos = cfg.cursos.map(function (c) { return c.nome; });
@@ -1013,7 +1026,7 @@ function desenharLista() {
   });
   if (!itens.length) {
     itens.push(el('p', { class: 'vazio', text: !todos.length ? 'A planilha ainda não tem candidatos. Importe o resultado pelo menu Pré-matrícula.' :
-      (termos.length ? 'Ninguém encontrado para "' + estado.busca.trim() + '". A busca olha o nome e o começo da inscrição, em todos os cursos.' : 'Ninguém nesta situação.') }));
+      (termos.length ? 'Ninguém encontrado para "' + estado.busca.trim() + '". A busca olha o nome e o começo da inscrição, em todos os cursos.' : (estado.cota ? (estado.situacao || estado.fora ? 'Ninguém nesta cota e situação.' : 'Ninguém nesta cota.') : 'Ninguém nesta situação.')) }));
   }
   const lista = $('lista'), rolagem = lista.scrollTop, pagina = window.pageYOffset;
   trocarFilhos(lista, itens);
@@ -1450,6 +1463,27 @@ function hoje() {
   return doisDigitos(d.getDate()) + '/' + doisDigitos(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + doisDigitos(d.getHours()) + ':' + doisDigitos(d.getMinutes());
 }
 function cotaNaTira(cota) { return cota === 'AC' ? 'Ampla' : cota; }
+/** Nas tiras em branco, documentos do tipo "basta um": 'moldura' (um quadradinho para cada, dentro de uma moldura) ou 'linha' (uma linha só, com "ou"). */
+const GRUPO_NA_TIRA_EM_BRANCO = 'moldura';
+/** Valores de "Vale para" (aba Regras) que separam as pessoas de uma mesma cota por grupo étnico-racial. */
+const ETNIAS = ['Pretos e pardos', 'Indígenas'];
+function ehEtnia(vale) { return ETNIAS.some(function (e) { return Logica.chave(e) === Logica.chave(vale); }); }
+/**
+ * Modelos de tira em branco: um por cota. A cota que tem documentos só de pretos e pardos e outros só de indígenas ganha
+ * um modelo para cada grupo, para ninguém ficar com quadradinhos vazios de documentos que não são os seus.
+ */
+function modelosEmBranco(cfg) {
+  const modelos = [];
+  cfg.cotas.forEach(function (cota) {
+    const grupos = ETNIAS.filter(function (e) {
+      return cfg.regras.some(function (r) { return (r.cotas || []).indexOf(cota) >= 0 && Logica.chave(r.vale) === Logica.chave(e); });
+    });
+    if (grupos.length > 1) grupos.forEach(function (e, n) { modelos.push({ chave: cota + '|' + e, cota: cota, etnia: e, rotulo: cota + ', ' + minuscula(e), principal: n === 0 }); });
+    else modelos.push({ chave: cota, cota: cota, etnia: '', rotulo: cota, principal: true });
+  });
+  return modelos;
+}
+
 /** Rótulo do filtro de quem não é aprovado: em geral são só os classificáveis. */
 function rotuloDeFora(lista) {
   return lista.some(function (v) { return Logica.chave(v.lista) !== 'classificavel'; }) ? 'Classificáveis e fora da lista' : 'Classificáveis';
@@ -1518,27 +1552,39 @@ function linhasDaTira(cfg, v) {
  * provisórios não ganham linha (quem trouxe tudo ficaria com um quadrado vazio): o documento que aceita provisório
  * leva um quadradinho "provisório" no fim da linha.
  */
-function linhasEmBranco(cfg, cota) {
-  const daCota = cfg.regras.filter(function (r) { return (r.cotas || []).indexOf(cota) >= 0; });
+function linhasEmBranco(cfg, cota, etnia) {
+  const daCota = cfg.regras.filter(function (r) {
+    return (r.cotas || []).indexOf(cota) >= 0 && !(etnia && ehEtnia(r.vale) && Logica.chave(r.vale) !== Logica.chave(etnia));
+  });
   const codigos = {};
   daCota.forEach(function (r) { codigos[r.codigo] = true; });
   const ehProvisorio = function (r) { return r.cobre.some(function (c) { return codigos[c]; }); };
   const aceita = {};
   daCota.forEach(function (r) { if (ehProvisorio(r)) r.cobre.forEach(function (c) { aceita[c] = true; }); });
   const QUANTOS = { 2: 'dos dois', 3: 'dos três', 4: 'dos quatro' };
-  return daCota.filter(function (r) { return !ehProvisorio(r); }).map(function (r) {
-    const notas = [];
-    if (r.vale && Logica.chave(r.vale) !== 'todos') notas.push(minuscula(r.vale));
-    if (r.grupo) {
-      const n = daCota.filter(function (x) { return x.grupo === r.grupo && !ehProvisorio(x); }).length;
-      if (n > 1) notas.push('basta um ' + (QUANTOS[n] || 'do grupo'));
+  const linhas = [], vistos = {};
+  const notaDe = function (r) { return r.vale && Logica.chave(r.vale) !== 'todos' && !(etnia && ehEtnia(r.vale)) ? minuscula(r.vale) : ''; };
+  const linha = function (r) { return { texto: r.documento, marcado: false, nota: '', lado: notaDe(r), provisorio: !!aceita[r.codigo] }; };
+  daCota.filter(function (r) { return !ehProvisorio(r); }).forEach(function (r) {
+    const g = r.grupo ? daCota.filter(function (x) { return x.grupo === r.grupo && !ehProvisorio(x); }) : [];
+    if (g.length < 2) { linhas.push(linha(r)); return; }
+    if (vistos[r.grupo]) return;
+    vistos[r.grupo] = true;
+    const lado = notaDe(r);
+    if (GRUPO_NA_TIRA_EM_BRANCO === 'linha') {
+      linhas.push({ texto: g.map(function (x, n) { return n ? minuscula(x.documento) : x.documento; }).join(' ou '), marcado: false, nota: '', lado: lado, provisorio: false });
+    } else {
+      linhas.push({ titulo: 'Basta um ' + (QUANTOS[g.length] || 'do grupo') + (lado ? ' (' + lado + ')' : '') + ':',
+        grupo: g.map(function (x) { return { texto: x.documento, marcado: false, nota: '', lado: '', provisorio: !!aceita[x.codigo] }; }) });
     }
-    return { texto: r.documento, marcado: false, nota: '', lado: notas.join('; '), provisorio: !!aceita[r.codigo] };
   });
+  return linhas;
 }
 
 function elLinhas(linhas) {
   return el('ul', {}, linhas.map(function (l) {
+    // documentos do tipo "basta um": moldura com o aviso em cima e um quadradinho para cada documento
+    if (l.grupo) return el('li', { class: 'basta' }, el('em', { text: l.titulo }), elLinhas(l.grupo));
     return el('li', {}, el('span', { class: 'cx' + (l.marcado ? ' sim' : '') }),
       el('span', {}, l.texto, l.lado ? [' ', el('em', { text: '(' + l.lado + ')' })] : null, l.nota ? el('small', { text: l.nota }) : null),
       l.provisorio ? el('span', { class: 'prov' }, el('span', { class: 'cx' }), 'provisório') : null);
@@ -1653,7 +1699,8 @@ function quantidadesEmBranco(cfg) {
     const tem = {};
     Object.keys(estado.candidatos).forEach(function (i) { if (estado.candidatos[i].cota) tem[estado.candidatos[i].cota] = true; });
     imp.brancas = {};
-    cfg.cotas.forEach(function (cota) { imp.brancas[cota] = tem[cota] ? (cota === 'AC' ? 4 : 2) : 0; });
+    // de início: 4 de ampla concorrência e 2 de cada cota com candidato; na cota com dois modelos, só o primeiro (pretos e pardos)
+    modelosEmBranco(cfg).forEach(function (m) { imp.brancas[m.chave] = tem[m.cota] && m.principal ? (m.cota === 'AC' ? 4 : 2) : 0; });
   }
   return imp.brancas;
 }
@@ -1718,9 +1765,9 @@ function montarOpcoes() {
   } else {
     const quantas = quantidadesEmBranco(cfg);
     impPecas.botao.textContent = 'Imprimir as tiras em branco';
-    partes = [el('p', { text: 'Tiras sem nome, para marcar à mão se a tela estiver fora do ar. Depois, lance as marcações na tela. Quantas de cada cota:' }),
-      el('div', { class: 'imp-linha' }, cfg.cotas.map(function (cota) {
-        return el('label', { class: 'imp-cota' }, cota, numero(quantas[cota], 60, 'Tiras em branco de ' + cota, function (n) { quantas[cota] = n; }));
+    partes = [el('p', { text: 'Tiras sem nome, para marcar à mão se a tela estiver fora do ar. Depois, lance as marcações na tela. Quantas de cada modelo:' }),
+      el('div', { class: 'imp-linha' }, modelosEmBranco(cfg).map(function (m) {
+        return el('label', { class: 'imp-cota' }, m.rotulo, numero(quantas[m.chave], 60, 'Tiras em branco de ' + m.rotulo, function (n) { quantas[m.chave] = n; }));
       })),
       el('div', { class: 'imp-linha' }, impPecas.botao)];
   }
@@ -1788,8 +1835,8 @@ function montarFolhas() {
     conteudo = itens.length ? itens : [el('p', { text: 'Informe quantos lembretes.' })];
   } else {
     const quantas = quantidadesEmBranco(cfg), itens = [];
-    cfg.cotas.forEach(function (cota) {
-      for (let i = 0; i < (quantas[cota] || 0); i++) itens.push(elTira(cfg, cota, null, null, '____/____/______', linhasEmBranco(cfg, cota)));
+    modelosEmBranco(cfg).forEach(function (m) {
+      for (let i = 0; i < (quantas[m.chave] || 0); i++) itens.push(elTira(cfg, m.cota, null, null, '____/____/______', linhasEmBranco(cfg, m.cota, m.etnia)));
     });
     conteudo = itens.length ? emPares(itens) : [el('p', { text: 'Informe quantas tiras de cada cota.' })];
   }
@@ -1864,6 +1911,31 @@ function mostrarFalta(insc) {
 
 // atalho na barra do topo (só aparece em tela larga); o clique fora do menu já o fecha
 $('botao-imprimir').addEventListener('click', abrirImpressao);
+
+/* ---------- filtro da lista por cota */
+function naCota(v) { return !estado.cota || (estado.cota === '*' ? !!v.cota && v.cota !== 'AC' : v.cota === estado.cota); }
+/** Monta as opções da caixa "Todas as cotas" com as cotas que têm candidato. Só refaz a caixa quando a lista de opções muda. */
+function montarFiltroDeCota(todos) {
+  const cfg = estado.config, caixa = $('filtro-cota'), tem = {};
+  todos.forEach(function (v) { if (v.cota) tem[v.cota] = true; });
+  const siglas = cfg.cotas.filter(function (c) { return tem[c] && c !== 'AC'; });
+  Object.keys(tem).forEach(function (c) { if (c !== 'AC' && siglas.indexOf(c) < 0) siglas.push(c); });
+  const opcoes = [['', 'Todas as cotas']];
+  if (tem.AC) opcoes.push(['AC', 'Ampla concorrência']);
+  if (siglas.length) opcoes.push(['*', 'Reserva de vagas']);
+  siglas.forEach(function (c) { opcoes.push([c, c]); });
+  if (estado.cota && !opcoes.some(function (o) { return o[0] === estado.cota; })) estado.cota = '';
+  const assinatura = opcoes.map(function (o) { return o[0]; }).join();
+  if (caixa.getAttribute('data-opcoes') !== assinatura) {
+    trocarFilhos(caixa, opcoes.map(function (o) { return el('option', { value: o[0], text: o[1], title: ROTULO_COTA[o[0]] || null }); }));
+    caixa.setAttribute('data-opcoes', assinatura);
+  }
+  caixa.value = estado.cota || '';
+  caixa.classList.toggle('ativo', !!estado.cota);
+  caixa.hidden = opcoes.length < 3;
+}
+estado.cota = '';
+$('filtro-cota').addEventListener('change', function () { estado.cota = $('filtro-cota').value; desenhar(); });
 
 partida();
 })();
