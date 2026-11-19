@@ -9,7 +9,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https: http://localhost:* http://127.0.0.1:*; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Pré-matrícula</title>
 <!--
-  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 4 (para o controle_base.gs versão 4 ou mais nova;
+  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 5 (para o controle_base.gs versão 4 ou mais nova;
   a impressão das tiras do checklist só aparece com a planilha na versão 8)
 
   Página única, sem bibliotecas e sem dados: nomes, regras e situações vêm da planilha, pela ponte
@@ -577,7 +577,7 @@ const ATRASO_CLIQUE = 350;        // junta cliques seguidos na mesma pessoa numa
 const ATRASO_TEXTO = 1500;        // espera a pessoa parar de digitar
 const LIMITE = 30000;             // desiste de um pedido sem resposta
 const GUARDADO = 'prematricula:aparelho';
-const VERSAO_DA_TELA = 4;
+const VERSAO_DA_TELA = 5;
 const ROTULO_COTA = {
   AC: 'ampla concorrência',
   LB_PPI: 'baixa renda, pretos, pardos e indígenas', LB_Q: 'baixa renda, quilombolas', LB_PCD: 'baixa renda, pessoas com deficiência', LB_EP: 'baixa renda, escola pública',
@@ -1252,7 +1252,8 @@ function linhasDeDocumentos(cfg, v, regras, insc, tipo) {
     linhas.push(el('li', { class: emGrupo ? 'no-grupo' : null }, el('div', { class: 'doc-linha' }, caixa(r), naoAtende)));
     (alternativas[r.codigo] || []).forEach(function (p) {
       const nome = p.documento.charAt(1) === p.documento.charAt(1).toLowerCase() ? p.documento.charAt(0).toLowerCase() + p.documento.slice(1) : p.documento;
-      linhas.push(el('li', { class: 'alternativa' }, el('div', { class: 'doc-linha' }, caixa(p, 'Não trouxe? Aceitar ' + nome))));
+      const cobre = regras.filter(function (x) { return p.cobre.indexOf(x.codigo) >= 0 && vale[x.codigo]; }).map(function (x) { return x.documento.split(' ')[0].toLowerCase(); });
+      linhas.push(el('li', { class: 'alternativa' }, el('div', { class: 'doc-linha' }, caixa(p, (cobre.length > 1 ? 'Não trouxe ' + cobre.join(' ou ') + '? ' : 'Não trouxe? ') + 'Aceitar ' + nome))));
     });
   });
   return linhas;
