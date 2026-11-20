@@ -9,7 +9,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https: http://localhost:* http://127.0.0.1:*; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Pré-matrícula</title>
 <!--
-  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 5 (para o controle_base.gs versão 4 ou mais nova;
+  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 6 (para o controle_base.gs versão 4 ou mais nova;
   a impressão das tiras do checklist só aparece com a planilha na versão 8)
 
   Página única, sem bibliotecas e sem dados: nomes, regras e situações vêm da planilha, pela ponte
@@ -329,6 +329,21 @@
   .lp small { display: block; font-size: 7.5pt; }
   @page { size: A4; margin: 10mm; }
   /* no papel, com a tela de impressão aberta, sai só o conteúdo das folhas (sem fundos: só linhas e texto) */
+  /* balanço de vagas */
+  .bal-curso { margin: 4mm 0 0; break-inside: avoid; page-break-inside: avoid; }
+  .bal-curso h3 { margin: 0 0 1mm; font-size: 11pt; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 6mm; }
+  .bal-total { font-size: 9.5pt; font-weight: 400; }
+  .bal { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9.5pt; }
+  .bal th, .bal td { border: 0.2mm solid #000; padding: 1.1mm 1mm; text-align: center; font-weight: 400; }
+  .bal thead th { font-weight: 700; font-size: 8pt; padding-left: 0.3mm; padding-right: 0.3mm; }
+  .bal thead th:first-child, .bal tbody th { width: 27%; text-align: left; padding-left: 1.6mm; }
+  .bal td.zero { color: #777; }
+  .bal td.forte, .bal tr.ociosas th { font-weight: 700; }
+  .bal td.zero.forte { font-weight: 400; }
+  .bal tr.ociosas th, .bal tr.ociosas td { border-top: 0.5mm solid #000; border-bottom: 0.5mm solid #000; }
+  .bal tr.anexo th, .bal tr.anexo td, .bal tr.lista th, .bal tr.lista td { font-style: italic; }
+  .bal-notas { margin-top: 1mm; font-size: 9pt; }
+  .bal-legenda { margin-top: 5mm; font-size: 8pt; }
   @media print {
     body.imprimindo { display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; }
     body.imprimindo > *:not(#impressao) { display: none !important; }
@@ -357,6 +372,7 @@
   <div id="menu" class="menu" hidden>
     <button type="button" data-acao="atualizar">Atualizar agora</button>
     <button type="button" data-acao="imprimir" id="menu-imprimir" hidden>Imprimir…</button>
+    <button type="button" data-acao="balanco" id="menu-balanco" hidden>Balanço de vagas</button>
     <button type="button" data-acao="trocar">Trocar nome ou código</button>
     <button type="button" data-acao="link">Copiar link para a equipe</button>
     <button type="button" data-acao="sair">Sair deste aparelho</button>
@@ -577,7 +593,7 @@ const ATRASO_CLIQUE = 350;        // junta cliques seguidos na mesma pessoa numa
 const ATRASO_TEXTO = 1500;        // espera a pessoa parar de digitar
 const LIMITE = 30000;             // desiste de um pedido sem resposta
 const GUARDADO = 'prematricula:aparelho';
-const VERSAO_DA_TELA = 5;
+const VERSAO_DA_TELA = 6;
 const ROTULO_COTA = {
   AC: 'ampla concorrência',
   LB_PPI: 'baixa renda, pretos, pardos e indígenas', LB_Q: 'baixa renda, quilombolas', LB_PCD: 'baixa renda, pessoas com deficiência', LB_EP: 'baixa renda, escola pública',
@@ -918,6 +934,7 @@ function desenharTopo() {
   $('versoes').textContent = 'Tela versão ' + VERSAO_DA_TELA + (cfg ? ', planilha versão ' + cfg.versao : '');
   $('menu-imprimir').hidden = !(cfg && Number(cfg.versao) >= 8);        // a impressão precisa do que a planilha guarda desde a versão 8
   $('botao-imprimir').hidden = $('menu-imprimir').hidden || quem.hidden;   // o mesmo atalho na barra do topo (o CSS só o mostra em tela larga)
+  $('menu-balanco').hidden = $('menu-imprimir').hidden;                    // o balanço abre no mesmo painel da impressão
 
   const faixa = $('faixa');
   if (estado.falha) {
@@ -1363,6 +1380,7 @@ function ligarEventos() {
     if (acao === 'trocar') mostrarEntrada({ podeCancelar: true, manterCodigo: true, texto: 'Troque o nome ou o código da equipe:' });
     if (acao === 'link') linkDaEquipe();
     if (acao === 'imprimir') abrirImpressao();
+    if (acao === 'balanco') abrirImpressao('balanco');
     if (acao === 'sair') {
       if (temPendencia() && !window.confirm('Há marcações que ainda não foram salvas. Sair assim mesmo?')) return;
       esquecer();
@@ -1451,7 +1469,7 @@ function carregarInicio() {
 /* 8. Impressão (pede a planilha na versão 8): tiras do checklist, lista   */
 /*    de pendências, lembretes e tiras em branco; "o que falta" na tela    */
 /* ====================================================================== */
-const MODOS = [['tiras', 'Tiras do checklist'], ['pendencias', 'Lista de pendências'], ['lembretes', 'Lembretes em branco'], ['brancas', 'Tiras em branco']];
+const MODOS = [['tiras', 'Tiras do checklist'], ['pendencias', 'Lista de pendências'], ['lembretes', 'Lembretes em branco'], ['brancas', 'Tiras em branco'], ['balanco', 'Balanço de vagas']];
 const GRUPOS_DE_TIRAS = [['nova', 'Novas'], ['mudou', 'Mudaram desde a última impressão'], ['igual', 'Já impressas'], ['indeferida', 'Indeferidas (só entram se você marcar)']];
 const imp = { modo: 'tiras', escolhidos: {}, pendencias: false, filtro: '', impressos: null, enviando: false, erro: '', lembretes: 6, brancas: null };
 const impPecas = {};
@@ -1677,6 +1695,88 @@ function folhaDePendencias(cfg) {
   ];
 }
 
+/* ---------- balanço de vagas: quantas vagas cada curso e cota tem para a chamada dos classificáveis */
+/**
+ * Conta, para cada curso, os aprovados de cada cota pela situação. Seguram a vaga: "Concluída" e "Pendência".
+ * Liberam a vaga: as situações postas à mão ("Indeferida", "Não compareceu") e quem ainda está "Aguardando".
+ * A vaga ociosa fica na cota em que a pessoa foi aprovada; o remanejamento entre cotas não é feito aqui.
+ * Classificável que já foi atendido (concluída ou com pendência) ocupa uma das vagas ociosas do curso.
+ */
+function dadosDoBalanco(cfg) {
+  const todos = Object.keys(estado.candidatos).map(visao);
+  const zeros = function () { const o = {}; cfg.cotas.forEach(function (k) { o[k] = 0; }); return o; };
+  const soma = function (o) { return cfg.cotas.reduce(function (s, k) { return s + o[k]; }, 0); };
+  return cfg.cursos.map(function (c) {
+    const d = { curso: c.nome, vagas: Number(c.vagas) || 0, anexo: c.anexo || null, aprovados: zeros(), seguram: zeros(), liberadas: zeros(), aguardando: zeros(),
+      ociosas: zeros(), lista: zeros(), semCota: 0, naLista: 0, chamados: 0 };
+    todos.forEach(function (v) {
+      if (v.curso !== c.nome) return;
+      const tipo = Logica.tipoSituacao(v.situacao);
+      const segura = tipo === 'concluida' || tipo === 'pendencia';
+      if (v.lista === cfg.aprovado) {
+        if (!(v.cota in d.aprovados)) { d.semCota++; return; }
+        d.aprovados[v.cota]++;
+        if (segura) d.seguram[v.cota]++;
+        else if (tipo === 'fixa') d.liberadas[v.cota]++;
+        else d.aguardando[v.cota]++;
+      } else if (segura) {
+        d.chamados++;
+      } else if (tipo !== 'fixa') {
+        d.naLista++;
+        const vistas = {};
+        String(v.outras || '').replace(/([A-Z][A-Z_]*)\s+\d+/g, function (tudo, cota) {
+          if (cota in d.lista && !vistas[cota]) { vistas[cota] = true; d.lista[cota]++; }
+          return tudo;
+        });
+      }
+    });
+    cfg.cotas.forEach(function (k) { d.ociosas[k] = d.liberadas[k] + d.aguardando[k]; });
+    d.totalAprovados = soma(d.aprovados) + d.semCota;
+    d.semAprovado = Math.max(0, d.vagas - d.totalAprovados);
+    d.totalOciosas = soma(d.ociosas);
+    d.aOfertar = Math.max(0, d.totalOciosas + d.semAprovado - d.chamados);
+    d.soma = soma;
+    return d;
+  });
+}
+function folhaDoBalanco(cfg) {
+  const dados = dadosDoBalanco(cfg);
+  const numero = function (n, forte) { return el('td', { class: (n ? '' : 'zero') + (forte ? ' forte' : ''), text: String(n) }); };
+  const linha = function (d, rotulo, valores, total, classe) {
+    return el('tr', { class: classe || null }, el('th', { scope: 'row', text: rotulo }),
+      cfg.cotas.map(function (k) { return numero(valores[k] || 0, classe === 'ociosas'); }), numero(total, true));
+  };
+  const blocos = dados.map(function (d) {
+    const anexo = d.anexo ? (function () { const o = {}; cfg.cotas.forEach(function (k) { o[k] = Number(d.anexo[k]) || 0; }); return o; })() : null;
+    const notas = [];
+    if (d.semAprovado) notas.push(el('div', {}, 'Vagas sem aprovado no resultado: ', el('b', { text: String(d.semAprovado) }), ' (' + d.vagas + ' vagas no curso, ' + d.totalAprovados + (d.totalAprovados === 1 ? ' aprovado)' : ' aprovados)')));
+    if (d.chamados) notas.push(el('div', {}, 'Classificáveis já atendidos, que ocupam vaga (concluídas e com pendência): ', el('b', { text: String(d.chamados) })));
+    if (d.semCota) notas.push(el('div', { text: 'Atenção: ' + d.semCota + (d.semCota === 1 ? ' aprovado está sem cota na planilha e ficou' : ' aprovados estão sem cota na planilha e ficaram') + ' fora do quadro.' }));
+    if (d.totalAprovados > d.vagas) notas.push(el('div', { text: 'Atenção: há mais aprovados (' + d.totalAprovados + ') do que vagas (' + d.vagas + '). Confira as vagas do curso na aba Config.' }));
+    return el('section', { class: 'bal-curso', 'data-curso': d.curso },
+      el('h3', {}, el('span', { text: d.curso }), el('span', { class: 'bal-total' }, 'Vagas ociosas no curso: ', el('b', { text: String(d.aOfertar) }))),
+      el('table', { class: 'bal' },
+        el('thead', {}, el('tr', {}, el('th', {}), cfg.cotas.map(function (k) { return el('th', { scope: 'col', text: k }); }), el('th', { scope: 'col', text: 'Total' }))),
+        el('tbody', {},
+          anexo ? linha(d, 'Anexo I do edital (referência)', anexo, d.soma(anexo), 'anexo') : null,
+          linha(d, 'Aprovados no resultado', d.aprovados, d.soma(d.aprovados), 'aprovados'),
+          linha(d, 'Seguram a vaga (concluídas e com pendência)', d.seguram, d.soma(d.seguram), 'seguram'),
+          linha(d, 'Liberadas (indeferidas e não compareceram)', d.liberadas, d.soma(d.liberadas), 'liberadas'),
+          linha(d, 'Ainda aguardando', d.aguardando, d.soma(d.aguardando), 'aguardando'),
+          linha(d, 'Vagas ociosas', d.ociosas, d.totalOciosas, 'ociosas'),
+          linha(d, 'Classificáveis na lista', d.lista, d.naLista, 'lista'))),
+      notas.length ? el('div', { class: 'bal-notas' }, notas) : null);
+  });
+  return [
+    el('div', { class: 'lp-cab' }, el('strong', { text: 'Balanço de vagas' }), el('span', { text: doProcesso(cfg) + ' · emitido em ' + hoje() })),
+    blocos.length ? blocos : el('p', { text: 'Nenhum curso na aba Config da planilha.' }),
+    el('div', { class: 'bal-legenda' },
+      el('div', { text: 'Vagas ociosas = liberadas + ainda aguardando, na cota em que a pessoa foi aprovada. O remanejamento entre cotas não está aplicado.' }),
+      el('div', { text: 'Vagas ociosas no curso = vagas ociosas + vagas sem aprovado no resultado − classificáveis já atendidos.' }),
+      el('div', { text: 'Classificáveis na lista: quem ainda aguarda em cada lista. Quem está em mais de uma lista conta uma vez no total.' }))
+  ];
+}
+
 /* ---------- tiras do lote: a planilha lembra o que foi impresso de cada pessoa */
 function paraTiras() {
   return Object.keys(estado.candidatos).map(visao).filter(function (v) {
@@ -1706,15 +1806,17 @@ function quantidadesEmBranco(cfg) {
   return imp.brancas;
 }
 
-function abrirImpressao() {
+function abrirImpressao(modo) {
   const painel = $('impressao');
+  if (typeof modo === 'string') imp.modo = modo;
+  else if (imp.modo === 'balanco') imp.modo = 'tiras';      // "Imprimir" abre nas tiras; o balanço tem o seu item no menu
   if (!impPecas.modos) {
     impPecas.modos = el('div', { class: 'imp-modos', role: 'group', 'aria-label': 'O que imprimir' });
     impPecas.opcoes = el('div', { class: 'imp-opcoes' });
     impPecas.confirma = el('div', {});
     trocarFilhos(painel,
       el('div', { class: 'imp-controles' },
-        el('div', { class: 'imp-topo' }, el('h2', { text: 'Imprimir' }), el('button', { class: 'botao pequeno', type: 'button', id: 'imp-fechar', text: 'Fechar', onclick: fecharImpressao })),
+        el('div', { class: 'imp-topo' }, (impPecas.titulo = el('h2', { text: 'Imprimir' })), el('button', { class: 'botao pequeno', type: 'button', id: 'imp-fechar', text: 'Fechar', onclick: fecharImpressao })),
         impPecas.modos, impPecas.confirma, impPecas.opcoes),
       el('div', { class: 'previa' }, el('p', { text: 'Prévia. A divisão em páginas aparece na janela de impressão. Nela, desmarque "cabeçalhos e rodapés" (no Firefox, em "Mais configurações"), para o endereço do site não sair no papel.' }), el('div', { id: 'folhas' })));
   }
@@ -1742,6 +1844,7 @@ function montarOpcoes() {
     campo.addEventListener('input', function () { aoMudar(Math.max(0, Math.min(maximo, Math.floor(Number(campo.value) || 0)))); montarFolhas(); });
     return campo;
   };
+  impPecas.titulo.textContent = imp.modo === 'balanco' ? 'Balanço de vagas' : 'Imprimir';
   impPecas.botao = el('button', { class: 'botao principal', type: 'button', id: 'imp-botao', onclick: imprimirAgora });
   impPecas.lista = null;
   imp.filtro = '';
@@ -1758,6 +1861,13 @@ function montarOpcoes() {
   } else if (imp.modo === 'pendencias') {
     impPecas.botao.textContent = 'Imprimir a lista';
     partes = [el('p', { text: 'Quem ficou devendo documento, por curso e nome, com telefone, e-mail e uma coluna para anotar o contato feito. Na janela de impressão também dá para salvar em PDF.' }),
+      el('div', { class: 'imp-linha' }, impPecas.botao)];
+  } else if (imp.modo === 'balanco') {
+    impPecas.botao.textContent = 'Imprimir o balanço';
+    const temAnexo = cfg.cursos.some(function (c) { return c.anexo; });
+    partes = [el('p', { text: 'Vagas ociosas de cada curso e cota, para a chamada dos classificáveis. O quadro acompanha as marcações da equipe: confira se a tela diz "Tudo salvo" e use "Atualizar agora" antes de fechar os números.' }),
+      temAnexo ? null : el('p', { text: Number(cfg.versao) >= 9 ? 'Para ver a linha do Anexo I, digite as vagas de cada cota na aba Config da planilha (colunas "Anexo I: ...", na linha de cada curso) e use "Atualizar agora".' :
+        'A linha de referência do Anexo I aparece quando a planilha estiver na versão 9.' }),
       el('div', { class: 'imp-linha' }, impPecas.botao)];
   } else if (imp.modo === 'lembretes') {
     impPecas.botao.textContent = 'Imprimir os lembretes';
@@ -1830,6 +1940,8 @@ function montarFolhas() {
     conteudo = lote.length ? emPares(lote.map(function (v) { return elTira(cfg, v.cota, v.curso, v.nome, v.docsEm || '', linhasDaTira(cfg, v)); })) : [el('p', { text: 'Nenhuma tira marcada.' })];
   } else if (imp.modo === 'pendencias') {
     conteudo = folhaDePendencias(cfg);
+  } else if (imp.modo === 'balanco') {
+    conteudo = folhaDoBalanco(cfg);
   } else if (imp.modo === 'lembretes') {
     const d = dadosDoLembrete(cfg), itens = [];
     for (let i = 0; i < imp.lembretes; i++) itens.push(elLembrete(cfg, d));
@@ -1911,7 +2023,7 @@ function mostrarFalta(insc) {
 }
 
 // atalho na barra do topo (só aparece em tela larga); o clique fora do menu já o fecha
-$('botao-imprimir').addEventListener('click', abrirImpressao);
+$('botao-imprimir').addEventListener('click', function () { abrirImpressao(); });
 
 /* ---------- filtro da lista por cota */
 function naCota(v) { return !estado.cota || (estado.cota === '*' ? !!v.cota && v.cota !== 'AC' : v.cota === estado.cota); }
