@@ -9,8 +9,9 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https: http://localhost:* http://127.0.0.1:*; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Pré-matrícula</title>
 <!--
-  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 6 (para o controle_base.gs versão 4 ou mais nova;
-  a impressão das tiras do checklist só aparece com a planilha na versão 8)
+  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 8 (com a planilha na versão 11: para publicar, presença, balcão e histórico da chamada;
+  para o controle_base.gs versão 4 ou mais nova;
+  a impressão das tiras do checklist só aparece com a planilha na versão 8, e a chamada dos classificáveis, na versão 10)
 
   Página única, sem bibliotecas e sem dados: nomes, regras e situações vêm da planilha, pela ponte
   (o App da Web do controle_base.gs). Pode ser aberta com dois cliques ou hospedada num link.
@@ -357,6 +358,155 @@
   .linha-busca #busca { flex: 1; min-width: 0; width: auto; }
   #filtro-cota { flex: none; width: 170px; padding: 0 6px; border: 1.5px solid var(--linha-forte); border-radius: 4px; background: #fff; color: inherit; font: inherit; font-size: 14px; cursor: pointer; }
   #filtro-cota.ativo { border-color: var(--verde, #1f7a3d); border-width: 2px; background: var(--verde-fundo, #e3f2e6); }
+
+  /* ---------- chamada dos classificáveis (planilha na versão 10) */
+  .chamada { position: fixed; inset: 0; z-index: 54; background: var(--mesa); overflow: auto; }
+  .ch-topo { background: var(--papel); border-bottom: 1px solid var(--linha-forte); padding: 10px 16px; display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; position: sticky; top: 0; z-index: 2; }
+  .ch-topo h2 { margin: 0; font-size: 19px; font-weight: 650; }
+  .ch-cursos { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ch-gravacao { margin-left: auto; font-size: 13px; color: var(--suave); }
+  .ch-gravacao.erro { color: var(--vermelho); font-weight: 600; }
+  .ch-avisos p { margin: 0; padding: 8px 16px; background: var(--ocre-fundo); border-bottom: 1px solid var(--linha); }
+  .ch-avisos b { color: var(--ocre); }
+  .ch-corpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; padding: 16px; max-width: 1320px; margin: 0 auto; align-items: start; }
+  .ch-bloco { background: var(--papel); border: 1px solid var(--linha-forte); margin: 0 0 16px; }
+  .ch-bloco > h3 { margin: 0; padding: 9px 14px; font-size: 15px; font-weight: 650; border-bottom: 1px solid var(--linha); display: flex; justify-content: space-between; align-items: center; gap: 6px 10px; flex-wrap: wrap; }
+  .ch-bloco h3 small { font-weight: 400; color: var(--suave); font-size: 13px; }
+  .ch-vaga { padding: 12px 14px 13px; border-top: 7px solid var(--verde); border-bottom: 1px solid var(--linha); }
+  .ch-vaga.fim { border-top-color: var(--ardosia); border-bottom: 0; }
+  .ch-rotulo { font-size: 13px; color: var(--suave); }
+  .ch-vaga p { margin: 4px 0 0; }
+  .ch-vaga p.ch-grande { margin: 2px 0 4px; font-size: 23px; font-weight: 650; line-height: 1.2; }
+  .ch-caminho { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .ch-caminho li { border: 1.5px solid var(--linha-forte); border-radius: 3px; padding: 2px 8px; font-size: 13px; color: var(--suave); background: #f6f8f5; }
+  .ch-caminho li b { color: var(--tinta); font-weight: 650; }
+  .ch-caminho li.vez, .ch-caminho li.vez b { border-color: var(--verde); background: var(--verde-fundo); color: var(--verde); }
+  .ch-cartao { padding: 14px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 16px; align-items: center; }
+  .ch-pos { font-size: 32px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1; text-align: center; min-width: 64px; }
+  .ch-pos small { display: block; font-size: 12px; font-weight: 400; color: var(--suave); margin-top: 5px; }
+  .ch-nome { font-size: 25px; font-weight: 650; line-height: 1.2; overflow-wrap: anywhere; }
+  .ch-meta { font-size: 13px; color: var(--suave); margin-top: 2px; }
+  .ch-cartao .acoes { grid-column: 1 / -1; margin-top: 12px; }
+  .ch-cartao .botao { min-height: 54px; padding: 10px 26px; font-size: 18px; }
+  .ch-cartao .botao:not(.principal) { font-weight: 600; }
+  .botao[disabled] { opacity: .5; cursor: default; }
+  .ch-troca { border-color: var(--ocre); }
+  .ch-troca-corpo { padding: 12px 14px 14px; }
+  .ch-troca-corpo p { margin: 0 0 10px; }
+  .ch-destinos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .ch-destinos .botao { text-align: left; padding: 6px 12px; }
+  .ch-destinos .botao small { display: block; font-weight: 400; font-size: 12px; color: var(--suave); }
+  .ch-destinos .botao[aria-pressed="true"] small { color: #fff; }
+  .ch-troca-fim { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ch-troca-fim input { flex: 1; min-width: 200px; width: auto; }
+  .ch-nomes, .ch-chamados { list-style: none; margin: 0; padding: 0; overflow: auto; position: relative; }
+  .ch-nomes { max-height: 46vh; }
+  .ch-chamados { max-height: 60vh; }
+  .ch-nomes li, .ch-chamados li { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 14px; border-bottom: 1px solid var(--linha); min-height: 44px; }
+  .ch-nomes li:last-child, .ch-chamados li:last-child { border-bottom: 0; }
+  .ch-p, .ch-hora { color: var(--suave); font-variant-numeric: tabular-nums; font-size: 14px; }
+  .ch-n { font-weight: 600; overflow-wrap: anywhere; }
+  .ch-m { display: block; font-size: 13px; font-weight: 400; color: var(--suave); }
+  .ch-nomes li.cinza { background: #f3f5f2; }
+  .ch-nomes li.cinza .ch-n { color: var(--suave); font-weight: 400; }
+  .ch-nomes li.proximo { background: var(--verde-fundo); border-left: 5px solid var(--verde); padding-left: 9px; }
+  .ch-nomes li.proximo .ch-p { color: var(--verde); font-weight: 650; }
+  .ch-chamados .acoes { justify-content: flex-end; }
+  .ch-marca { display: inline-block; font-size: 12px; border: 1px solid var(--ocre); color: var(--ocre); border-radius: 3px; padding: 0 5px; margin-left: 6px; white-space: nowrap; }
+  .ch-quadro { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .ch-quadro th, .ch-quadro td { border: 1px solid var(--linha); padding: 6px 1px; text-align: center; font-weight: 400; }
+  .ch-quadro thead th { font-size: 11px; font-weight: 650; color: var(--suave); }
+  .ch-quadro thead th:first-child, .ch-quadro tbody th { width: 27%; text-align: left; padding-left: 12px; border-left: 0; }
+  .ch-quadro td:last-child, .ch-quadro thead th:last-child { border-right: 0; font-weight: 650; }
+  .ch-quadro td.zero { color: var(--linha-forte); font-weight: 400; }
+  .ch-quadro tr.saldo th, .ch-quadro tr.saldo td { font-weight: 650; font-size: 14px; }
+  .ch-quadro tr.saldo td.zero { font-weight: 400; }
+  .ch-quadro td.vez { background: var(--verde-fundo); color: var(--verde); box-shadow: inset 0 0 0 2px var(--verde); }
+  .ch-quadro tr.sem-oferta th, .ch-quadro tr.sem-oferta td, .ch-quadro tr.mais1 th, .ch-quadro tr.mais1 td { color: var(--ocre); }
+  .ch-quadro tr.sem-oferta td.zero, .ch-quadro tr.mais1 td.zero { color: var(--linha-forte); }
+  .ch-total { margin: 0; padding: 9px 14px; font-size: 13px; color: var(--suave); }
+  .ch-total b { color: var(--tinta); }
+  .ch-vazio { padding: 14px; color: var(--suave); margin: 0; }
+  .alerta.vaga { --cor: var(--verde); --fundo: var(--verde-fundo); }
+  .bal tr.saldo th, .bal tr.saldo td { border-bottom: 0.5mm solid #000; }
+  .bal tr.saldo th { font-weight: 700; }
+  @media (hover: hover) { .botao[disabled]:hover { border-color: var(--linha-forte); } }
+  @media (max-width: 899px) {
+    body.com-chamada { overflow: hidden; }
+    .ch-corpo { display: block; padding: 10px 0 0; }
+    .ch-bloco { border-left: 0; border-right: 0; margin-bottom: 10px; }
+    .ch-topo { padding: 8px 12px; }
+    .ch-topo h2 { font-size: 17px; flex: 1; }
+    .ch-gravacao { margin-left: 0; order: 5; width: 100%; }
+    .ch-nome { font-size: 22px; }
+    .ch-cartao .acoes .botao { flex: 1; padding-left: 10px; padding-right: 10px; }
+    .ch-nomes, .ch-chamados { max-height: none; }
+    .ch-chamados li { grid-template-columns: 46px minmax(0, 1fr); }
+    .ch-chamados .acoes { grid-column: 2; justify-content: flex-start; }
+    .ch-quadro { font-size: 12px; }
+    .ch-quadro thead th { font-size: 9px; }
+    .ch-quadro thead th:first-child, .ch-quadro tbody th { width: 30%; padding-left: 8px; font-size: 11px; }
+  }
+  /* ---------- para publicar (quadro e listas) */
+  .pub { font-size: 9.5pt; margin: 0 0 2mm; }
+  .pub-titulo { margin: 4mm 0 1.5mm; font-size: 11pt; }
+  .pub-nota { font-size: 8.5pt !important; margin: 0 0 4mm !important; }
+  .pub-curso h3 { margin: 6mm 0 1mm; font-size: 12pt; }
+  .pub-curso h4 { margin: 3.5mm 0 1mm; font-size: 10pt; }
+  .pub-curso table { width: 100%; }
+  .pub-curso tr { break-inside: avoid; page-break-inside: avoid; }
+  .pub-avisos p { margin: 0 0 6px; padding: 7px 10px; background: var(--ocre-fundo); border-left: 4px solid var(--ocre); }
+  /* ---------- o dia da chamada: busca, presença, chave, histórico */
+  .ch-barra { background: var(--papel); border-bottom: 1px solid var(--linha); padding: 8px 16px; display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+  .ch-barra #ch-busca { flex: 1 1 300px; min-width: 200px; max-width: 520px; height: 36px; padding: 0 10px; border: 1.5px solid var(--linha-forte); border-radius: 4px; font: inherit; background: #fff; color: inherit; }
+  .ch-forma { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; flex: 1 1 380px; font-size: 13.5px; }
+  .ch-forma #ch-chave[aria-pressed="true"] { background: var(--ocre); border-color: var(--ocre); color: #fff; font-weight: 650; }
+  .ch-pulando { color: var(--ocre); font-weight: 600; }
+  .ch-chave-painel { flex-basis: 100%; background: var(--ocre-fundo); border: 1px solid var(--ocre); padding: 10px 12px; max-width: 760px; }
+  .ch-chave-painel p { margin: 0 0 8px; }
+  .ch-ler small { display: block; color: var(--suave); }
+  .ch-ler span { font-size: 16px; font-weight: 600; }
+  .ch-chave-painel .acoes { display: flex; gap: 8px; }
+  .ch-abas { display: flex; gap: 6px; margin-left: auto; }
+  .ch-achados { margin: 12px 16px 0; max-width: 1288px; }
+  .ch-regularizar { margin: 0; padding: 8px 14px; border-top: 1px solid var(--linha); background: var(--ocre-fundo); font-size: 13.5px; }
+  .ch-historico { padding: 14px 16px 30px; max-width: 1320px; margin: 0 auto; }
+  .ch-hist-controles { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; margin-bottom: 10px; }
+  .ch-hist-folha { background: var(--papel); border: 1px solid var(--linha-forte); padding: 12px 14px; }
+  .ch-hist { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .ch-hist th, .ch-hist td { border: 1px solid var(--linha-forte); padding: 4px 6px; text-align: left; vertical-align: top; }
+  .ch-hist th { background: var(--mesa); font-weight: 650; }
+  .ch-hist td:nth-child(1), .ch-hist td:nth-child(3), .ch-hist td:nth-child(5) { white-space: nowrap; }
+  @media print {
+    body.imprimindo-historico { display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; }
+    body.imprimindo-historico > *:not(#chamada) { display: none !important; }
+    body.imprimindo-historico > #chamada { position: static !important; overflow: visible !important; background: #fff !important; }
+    body.imprimindo-historico #chamada > *:not(.ch-historico) { display: none !important; }
+    body.imprimindo-historico .ch-hist-controles { display: none !important; }
+    body.imprimindo-historico .ch-historico { padding: 0 !important; max-width: none !important; }
+    body.imprimindo-historico .ch-hist-folha { border: 0 !important; padding: 0 !important; }
+    body.imprimindo-historico .ch-hist { font-size: 8.5pt; }
+    body.imprimindo-historico .ch-hist th, body.imprimindo-historico .ch-hist td { border: 0.2mm solid #000; }
+    body.imprimindo-historico .ch-hist tr { break-inside: avoid; page-break-inside: avoid; }
+  }
+  /* ---------- balcão */
+  .balcao-barra { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; padding: 8px 12px; background: var(--verde-fundo); border-bottom: 1px solid var(--linha-forte); font-size: 14px; }
+  .bb-meu { border: 0; background: none; padding: 0 4px; font: inherit; font-weight: 650; color: var(--verde); text-decoration: underline; cursor: pointer; }
+  .alerta.fila-balcao { --cor: var(--ardosia); --fundo: var(--ardosia-fundo); flex-wrap: wrap; }
+  .alerta.fila-balcao .acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+  .travado { opacity: 0.55; }
+  .balcao { position: fixed; inset: 0; z-index: 53; background: var(--mesa); overflow: auto; }
+  .bl-corpo { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; padding: 16px; max-width: 1320px; margin: 0 auto; align-items: start; }
+  .bl-lista { list-style: none; margin: 0; padding: 0; }
+  .bl-lista li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; padding: 9px 14px; border-top: 1px solid var(--linha); align-items: start; }
+  .bl-lista li:first-child { border-top: 0; }
+  .bl-lista .ch-n, .bl-lista .ch-m, .bl-docs { display: block; }
+  .bl-n { font-size: 22px; font-weight: 650; color: var(--verde); line-height: 1.1; }
+  #bl-proximos .ch-n { font-size: 17px; }
+  .bl-docs { font-size: 12.5px; color: var(--suave); margin-top: 2px; }
+  @media (max-width: 899px) { .bl-corpo { grid-template-columns: minmax(0, 1fr); padding: 10px; } }
+  .ch-achados .ch-chamados li { grid-template-columns: minmax(0, 1fr) auto; }
+  .ch-nomes li > .botao { white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -366,6 +516,7 @@
   <div class="marca"><strong>Pré-matrícula</strong><span id="subtitulo"></span></div>
   <div class="topo-direita">
     <span id="rede" class="rede parada" role="status" aria-live="polite"></span>
+    <button id="botao-chamada" class="quem imprimir-topo" type="button" hidden>Chamada</button>
     <button id="botao-imprimir" class="quem imprimir-topo" type="button" hidden>Imprimir</button>
     <button id="botao-quem" class="quem" type="button" aria-haspopup="true" aria-expanded="false" hidden></button>
   </div>
@@ -373,6 +524,9 @@
     <button type="button" data-acao="atualizar">Atualizar agora</button>
     <button type="button" data-acao="imprimir" id="menu-imprimir" hidden>Imprimir…</button>
     <button type="button" data-acao="balanco" id="menu-balanco" hidden>Balanço de vagas</button>
+    <button type="button" data-acao="chamada" id="menu-chamada" hidden>Chamada dos classificáveis</button>
+    <button type="button" data-acao="balcao" id="menu-balcao" hidden>Balcão (painel)</button>
+    <button type="button" data-acao="publicar" id="menu-publicar" hidden>Para publicar: quadro e listas</button>
     <button type="button" data-acao="trocar">Trocar nome ou código</button>
     <button type="button" data-acao="link">Copiar link para a equipe</button>
     <button type="button" data-acao="sair">Sair deste aparelho</button>
@@ -396,6 +550,7 @@
       <div id="cursos" class="abas" role="tablist" aria-label="Curso"></div>
       <div id="contadores" class="contadores" aria-label="Situação"></div>
     </div>
+    <div id="balcao-barra" class="balcao-barra" hidden></div>
     <div id="lista" class="lista"></div>
   </section>
   <section id="ficha" class="painel-ficha" aria-label="Ficha da pessoa"></section>
@@ -428,6 +583,8 @@
   </form>
 </div>
 
+<div id="chamada" class="chamada" aria-label="Chamada dos classificáveis" hidden></div>
+<div id="balcao" class="balcao" aria-label="Balcão" hidden></div>
 <div id="impressao" class="impressao" aria-label="Imprimir" hidden></div>
 <div id="lembrete" class="lembrete" aria-label="Documentos a entregar" hidden></div>
 
@@ -586,6 +743,156 @@ const Logica = (function () {
 /*LOGICA-FIM*/
 
 /* ====================================================================== */
+/* 1b. Regra da chamada dos classificáveis: função pura, sem tela e sem    */
+/*     planilha. Entram as vagas e os fatos de cada pessoa; sai a vaga em  */
+/*     chamada, o caminho dela e quem é o próximo. Recalculada a cada      */
+/*     mudança: nada aqui guarda posição de fila.                          */
+/* ====================================================================== */
+/*REGRA-INICIO*/
+const Regra = (function () {
+  const GERAL = 'AC';              // a lista geral é a da ampla concorrência
+  const SEM = 'SA';                // vagas sem aprovado no resultado (vagas do curso menos aprovados)
+  const MAIS1 = '+1';              // vaga a mais numa cota, por troca manual: não tira vaga de nenhuma origem
+  /** Ordem em que as vagas de cota são chamadas, depois das de ampla (art. 20 da PN 21/2012; a mesma do ano passado). */
+  const ORDEM = ['LI_EP', 'LI_PCD', 'LI_Q', 'LI_PPI', 'LB_EP', 'LB_PCD', 'LB_Q', 'LB_PPI'];
+  /** Para onde vai a vaga que sobra em cada cota, nesta ordem; por último, a lista geral (Manual Sisu 2026, Anexo II). */
+  const CADEIA = {
+    LB_PPI: ['LB_Q', 'LB_PCD', 'LB_EP', 'LI_PPI', 'LI_Q', 'LI_PCD', 'LI_EP'],
+    LB_Q: ['LB_PPI', 'LB_PCD', 'LB_EP', 'LI_PPI', 'LI_Q', 'LI_PCD', 'LI_EP'],
+    LB_PCD: ['LB_PPI', 'LB_Q', 'LB_EP', 'LI_PPI', 'LI_Q', 'LI_PCD', 'LI_EP'],
+    LB_EP: ['LB_PPI', 'LB_Q', 'LB_PCD', 'LI_PPI', 'LI_Q', 'LI_PCD', 'LI_EP'],
+    LI_PPI: ['LB_PPI', 'LB_Q', 'LB_PCD', 'LB_EP', 'LI_Q', 'LI_PCD', 'LI_EP'],
+    LI_Q: ['LB_PPI', 'LB_Q', 'LB_PCD', 'LB_EP', 'LI_PPI', 'LI_PCD', 'LI_EP'],
+    LI_PCD: ['LB_PPI', 'LB_Q', 'LB_PCD', 'LB_EP', 'LI_PPI', 'LI_Q', 'LI_EP'],
+    LI_EP: ['LB_PPI', 'LB_Q', 'LB_PCD', 'LB_EP', 'LI_PPI', 'LI_Q', 'LI_PCD']
+  };
+  const LISTAS = [GERAL].concat(ORDEM);
+  const ORIGENS = LISTAS.concat([SEM]);          // ordem em que as vagas são oferecidas
+
+  /** "AC 77º; LI_EP 28º" vira { AC: 77, LI_EP: 28 }. */
+  function posicoes(outras) {
+    const pos = {};
+    String(outras || '').split(';').forEach(function (parte) {
+      const m = /^\s*([A-Z][A-Z_]*)\s+(\d+)/.exec(parte);
+      if (m && LISTAS.indexOf(m[1]) >= 0) pos[m[1]] = Number(m[2]);
+    });
+    return pos;
+  }
+  function nomeDaVaga(cota) { return cota === GERAL ? 'ampla' : cota; }
+  function nomeDaLista(lista) { return lista === GERAL ? 'lista geral' : 'lista de ' + lista; }
+  /** "vaga de LI_EP, remanejada de LI_PPI"; "vaga de ampla, +1 por troca manual". Igual ao texto do Registro da planilha. */
+  function textoDaVaga(cota, origem) {
+    const base = 'vaga de ' + nomeDaVaga(cota);
+    if (!origem || origem === cota) return base;
+    if (origem === MAIS1) return base + ', +1 por troca manual';
+    if (origem === SEM) return base + ', das vagas sem aprovado no resultado';
+    return base + ', remanejada de ' + origem;
+  }
+  /** Por que uma lista foi pulada: sem ninguém, ou ninguém que possa ser chamado. */
+  function motivoDaLista(itens) {
+    if (!itens.length) return 'sem candidatos na lista';
+    const n = { vaga: 0, ausente: 0, indeferido: 0, sem_presenca: 0 };
+    itens.forEach(function (x) { n[x.como] = (n[x.como] || 0) + 1; });
+    if (n.vaga === itens.length) return 'todos já com vaga';
+    if (n.ausente === itens.length) return 'todos chamados e ausentes';
+    if (n.sem_presenca === itens.length) return 'ninguém com presença registrada';
+    const partes = [];
+    if (n.vaga) partes.push(n.vaga + ' com vaga');
+    if (n.ausente) partes.push(n.ausente + (n.ausente === 1 ? ' ausente' : ' ausentes'));
+    if (n.indeferido) partes.push(n.indeferido + (n.indeferido === 1 ? ' indeferido' : ' indeferidos'));
+    if (n.sem_presenca) partes.push(n.sem_presenca + ' sem presença registrada');
+    return partes.join(', ');
+  }
+
+  /**
+   * entrada = {
+   *   vagas        total de vagas do curso (é o teto: a chamada não passa dele)
+   *   seguram      aprovados que seguram a vaga (concluídas e com pendência)
+   *   ociosas      { origem: n } vagas ociosas por cota de origem; em "SA", as vagas sem aprovado no resultado
+   *   pessoas      [{ insc, pos: { lista: posição }, e: '' | 'P' | 'A' | 'R', cota, o (origem da vaga), fixa, presenca }]
+   *                e = presente, ausente, reintegrado ou não chamado; fixa = indeferido depois de presente (libera a vaga)
+   *   soPresentes  true para chamar só quem teve a presença registrada (os outros continuam "não chamados")
+   * }
+   * saída = {
+   *   quadro       { origem: { ociosas, usadas, livres, ofertadas, semOferta, mais1 } }
+   *   listas       { lista: [{ insc, pos, como }] } na ordem; como = 'livre' | 'vaga' | 'ausente' | 'indeferido' | 'sem_presenca'
+   *   vaga         a vaga em chamada: { origem, lista, cota, proximo, pos, caminho: [{ lista, motivo }] }; null se não há vaga a oferecer.
+   *                "proximo" vazio quer dizer que não há mais ninguém para chamar.
+   *   ocupadas, capacidade, livres, ofertadas, semOferta, comVaga, mais1, excesso
+   * }
+   * Regra: as vagas de ampla vão pela lista geral; depois as de cada cota, na ORDEM, cada uma pela lista da própria cota;
+   * sem ninguém nela, a vaga percorre a CADEIA e, por último, a lista geral. Quem ocupa a vaga fica com a cota da lista
+   * pela qual foi chamado. Vaga confirmada nunca é desfeita aqui: quem tem vaga só deixa de contar se for indeferido.
+   */
+  function calcular(entrada) {
+    const pessoas = entrada.pessoas || [];
+    const como = function (p) {
+      if (p.e === 'P') return p.fixa ? 'indeferido' : 'vaga';
+      if (p.e === 'A') return 'ausente';
+      if (p.fixa) return 'indeferido';                       // situação posta à mão (indeferida, não compareceu) sem passar pela chamada
+      return entrada.soPresentes && !p.presenca ? 'sem_presenca' : 'livre';
+    };
+    const usadas = {}, mais1 = {};
+    ORIGENS.forEach(function (o) { usadas[o] = 0; });
+    let comVaga = 0, totalMais1 = 0;
+    pessoas.forEach(function (p) {
+      if (como(p) !== 'vaga') return;
+      comVaga++;
+      if (p.o && p.o !== MAIS1 && p.o in usadas) usadas[p.o]++;
+      else { totalMais1++; mais1[p.cota] = (mais1[p.cota] || 0) + 1; }
+    });
+    const ocupadas = (Number(entrada.seguram) || 0) + comVaga;
+    const capacidade = Math.max(0, (Number(entrada.vagas) || 0) - ocupadas);
+
+    // vagas livres de cada origem, na ordem da chamada; as que passam do total do curso ficam sem oferta
+    const quadro = {};
+    let livres = 0, resta = capacidade, excesso = 0;
+    ORIGENS.forEach(function (o) {
+      const ociosas = Number((entrada.ociosas || {})[o]) || 0;
+      const sobra = Math.max(0, ociosas - usadas[o]);
+      if (usadas[o] > ociosas) excesso += usadas[o] - ociosas;
+      const ofertadas = Math.min(sobra, resta);
+      resta -= ofertadas;
+      livres += sobra;
+      quadro[o] = { ociosas: ociosas, usadas: usadas[o], livres: sobra, ofertadas: ofertadas, semOferta: sobra - ofertadas, mais1: mais1[o] || 0 };
+    });
+
+    const listas = {};
+    LISTAS.forEach(function (l) {
+      listas[l] = pessoas.filter(function (p) { return p.pos && p.pos[l]; })
+        .sort(function (a, b) { return a.pos[l] - b.pos[l]; })
+        .map(function (p) { return { insc: p.insc, pos: p.pos[l], como: como(p) }; });
+    });
+
+    // a vaga em chamada é a primeira em oferta, na ordem; ela procura o primeiro nome livre no seu percurso de listas
+    let vaga = null;
+    const origem = ORIGENS.filter(function (o) { return quadro[o].ofertadas > 0; })[0];
+    if (origem) {
+      const percurso = origem === GERAL || origem === SEM ? [GERAL] : [origem].concat(CADEIA[origem], [GERAL]);
+      const caminho = [];
+      let lista = '', proximo = null;
+      for (let k = 0; k < percurso.length && !proximo; k++) {
+        proximo = listas[percurso[k]].filter(function (x) { return x.como === 'livre'; })[0] || null;
+        if (proximo) lista = percurso[k];
+        caminho.push({ lista: percurso[k], motivo: proximo ? '' : motivoDaLista(listas[percurso[k]]) });
+      }
+      vaga = { origem: origem, lista: lista, cota: lista, proximo: proximo ? proximo.insc : '', pos: proximo ? proximo.pos : 0, caminho: caminho };
+    }
+    return { quadro: quadro, listas: listas, vaga: vaga, ocupadas: ocupadas, capacidade: capacidade, livres: livres,
+      ofertadas: Math.min(livres, capacidade), semOferta: Math.max(0, livres - capacidade), comVaga: comVaga, mais1: totalMais1, excesso: excesso };
+  }
+
+  /** O caminho da vaga em uma linha, para o Registro: "LI_PPI: sem candidatos na lista; ...; LI_EP: na vez". */
+  function caminhoEmTexto(vaga) {
+    return vaga.caminho.map(function (c) { return c.lista + ': ' + (c.motivo || 'na vez'); }).join('; ');
+  }
+
+  return { GERAL: GERAL, SEM: SEM, MAIS1: MAIS1, ORDEM: ORDEM, CADEIA: CADEIA, LISTAS: LISTAS, ORIGENS: ORIGENS, posicoes: posicoes,
+    nomeDaVaga: nomeDaVaga, nomeDaLista: nomeDaLista, textoDaVaga: textoDaVaga, motivoDaLista: motivoDaLista, calcular: calcular, caminhoEmTexto: caminhoEmTexto };
+})();
+/*REGRA-FIM*/
+
+/* ====================================================================== */
 /* 2. Estado                                                              */
 /* ====================================================================== */
 const INTERVALO = 12000;          // de quanto em quanto tempo a tela pergunta à planilha o que mudou
@@ -593,7 +900,7 @@ const ATRASO_CLIQUE = 350;        // junta cliques seguidos na mesma pessoa numa
 const ATRASO_TEXTO = 1500;        // espera a pessoa parar de digitar
 const LIMITE = 30000;             // desiste de um pedido sem resposta
 const GUARDADO = 'prematricula:aparelho';
-const VERSAO_DA_TELA = 6;
+const VERSAO_DA_TELA = 8;
 const ROTULO_COTA = {
   AC: 'ampla concorrência',
   LB_PPI: 'baixa renda, pretos, pardos e indígenas', LB_Q: 'baixa renda, quilombolas', LB_PCD: 'baixa renda, pessoas com deficiência', LB_EP: 'baixa renda, escola pública',
@@ -688,7 +995,7 @@ function aplicar(r, inicio) {
   (r.candidatos || []).forEach(function (c) {
     recebidos[c.insc] = true;
     // resposta que pode ser mais velha que a última gravação desta pessoa: fica para a próxima consulta
-    if (estado.enviando[c.insc] || (estado.gravadoEm[c.insc] || 0) >= inicio) { pulou = true; return; }
+    if (estado.enviando[c.insc] || (estado.gravadoEm[c.insc] || 0) >= inicio || chamadaPendente(c.insc)) { pulou = true; return; }
     estado.candidatos[c.insc] = c;
   });
   if (r.parcial) (r.removidos || []).forEach(function (insc) { delete estado.candidatos[insc]; });
@@ -727,7 +1034,7 @@ function agendarConsulta() {
 /* 4. Gravação em segundo plano: a tela marca na hora e envia depois      */
 /* ====================================================================== */
 function loteVazio(lote) { return !Object.keys(lote.docs).length && !Object.keys(lote.campos).length; }
-function temPendencia() { return Object.keys(estado.fila).length > 0 || Object.keys(estado.enviando).length > 0; }
+function temPendencia() { return Object.keys(estado.fila).length > 0 || Object.keys(estado.enviando).length > 0 || cham.fila.length > 0 || !!cham.enviando; }
 
 /** Registra uma mudança de uma pessoa. Mudanças seguidas na mesma pessoa viram um pedido só. */
 function alterar(insc, mudanca, atraso) {
@@ -797,7 +1104,9 @@ function bombear() {
 function tentarAgora() {
   estado.pausaAte = 0;
   Object.keys(estado.fila).forEach(function (insc) { estado.fila[insc].quando = 0; });
+  cham.pausaAte = 0;
   bombear();
+  bombearChamada();
   consultar();
 }
 
@@ -817,7 +1126,7 @@ function visao(insc) {
       Object.keys(x.campos).forEach(function (k) { ov.campos[k] = x.campos[k]; });
     });
   }
-  return Logica.ver(estado.config, c, ov);
+  return comChamada(Logica.ver(estado.config, c, ov));
 }
 function marcarTodos(insc) {
   const v = visao(insc);
@@ -903,7 +1212,7 @@ function desenhar() {
     desenhoPendente = false;
     const foco = document.activeElement && document.activeElement.getAttribute ? document.activeElement.getAttribute('data-foco') : null;
     desenharTopo();
-    if (estado.config) { desenharLista(); desenharFicha(); desenharImpressao(); }
+    if (estado.config) { desenharLista(); desenharFicha(); desenharImpressao(); desenharChamada(); desenharBalcao(); }
     if (foco && (!document.activeElement || document.activeElement.getAttribute('data-foco') !== foco)) {
       const alvo = document.querySelector('[data-foco="' + foco.replace(/["\\]/g, '') + '"]');
       if (alvo) alvo.focus({ preventScroll: true });
@@ -922,7 +1231,7 @@ function desenharTopo() {
   const rede = $('rede');
   let classe = '', texto = '';
   if (!cfg) { classe = 'parada'; texto = ''; }
-  else if (estado.falha) { classe = 'erro'; texto = 'Não salvou'; }
+  else if (estado.falha || cham.falha) { classe = 'erro'; texto = 'Não salvou'; }
   else if (temPendencia()) { classe = 'salvando'; texto = 'Salvando…'; }
   else if (estado.semResposta >= 2) { classe = 'erro'; texto = estado.recado ? 'Sem resposta' : 'Sem conexão'; }
   else { classe = ''; texto = 'Tudo salvo'; }
@@ -935,11 +1244,15 @@ function desenharTopo() {
   $('menu-imprimir').hidden = !(cfg && Number(cfg.versao) >= 8);        // a impressão precisa do que a planilha guarda desde a versão 8
   $('botao-imprimir').hidden = $('menu-imprimir').hidden || quem.hidden;   // o mesmo atalho na barra do topo (o CSS só o mostra em tela larga)
   $('menu-balanco').hidden = $('menu-imprimir').hidden;                    // o balanço abre no mesmo painel da impressão
+  $('menu-publicar').hidden = $('menu-imprimir').hidden;
+  $('menu-balcao').hidden = !temDia();
+  $('menu-chamada').hidden = !(cfg && Number(cfg.versao) >= 10);          // a chamada dos classificáveis usa o que a planilha guarda desde a versão 10
+  $('botao-chamada').hidden = !temChamada() || quem.hidden;               // atalho na barra do topo (só em tela larga)
 
   const faixa = $('faixa');
-  if (estado.falha) {
+  if (estado.falha || cham.falha) {
     faixa.hidden = false; faixa.className = 'faixa';
-    $('faixa-texto').textContent = 'Não salvou. ' + estado.falha + ' O que você marcou continua na tela e será enviado de novo.';
+    $('faixa-texto').textContent = 'Não salvou. ' + (estado.falha || cham.falha) + ' O que você marcou continua na tela e será enviado de novo.';
   } else if (cfg && estado.semResposta >= 2) {
     faixa.hidden = false; faixa.className = 'faixa branda';
     $('faixa-texto').textContent = (estado.recado || 'Sem conexão com a planilha.') + ' A lista pode estar desatualizada.';
@@ -958,8 +1271,10 @@ function desenharLista() {
   const cfg = estado.config;
   const todos = Object.keys(estado.candidatos).map(visao);
   montarFiltroDeCota(todos);
-  const aprovados = todos.filter(function (v) { return v.lista === cfg.aprovado && naCota(v); });
-  const fora = todos.filter(function (v) { return v.lista !== cfg.aprovado && naCota(v); });
+  // quem tem vaga: os aprovados e os classificáveis confirmados na chamada, que passam a ser atendidos como aprovados
+  const comVaga = function (v) { return v.lista === cfg.aprovado || daChamada(v); };
+  const aprovados = todos.filter(function (v) { return comVaga(v) && naCota(v); });
+  const fora = todos.filter(function (v) { return !comVaga(v) && naCota(v); });
 
   // cursos: os da aba Config, na ordem dela, e depois qualquer outro que apareça nos dados
   const cursos = cfg.cursos.map(function (c) { return c.nome; });
@@ -1007,10 +1322,13 @@ function desenharLista() {
   }
   const ordemCota = function (q) { const i = cfg.cotas.indexOf(q); return i < 0 ? 99 : i; };
   const ehAprovado = function (v) { return v.lista === cfg.aprovado; };
+  const blocoDe = function (v) { return ehAprovado(v) ? 0 : (daChamada(v) ? 1 : 2); };          // aprovados, confirmados na chamada, demais
+  const grupoDe = function (x) { return ehAprovado(x) ? 'cota:' + x.cota : (daChamada(x) ? 'chamada' : 'fora:' + x.lista); };
   mostrar.sort(function (a, b) {
     return (cursos.indexOf(a.curso) - cursos.indexOf(b.curso)) ||
-      ((ehAprovado(a) ? 0 : 1) - (ehAprovado(b) ? 0 : 1)) ||
-      (ehAprovado(a) ? (ordemCota(a.cota) - ordemCota(b.cota)) || ((Number(a.clas) || 9999) - (Number(b.clas) || 9999)) : posicaoAC(a.outras) - posicaoAC(b.outras)) ||
+      (blocoDe(a) - blocoDe(b)) ||
+      (ehAprovado(a) ? (ordemCota(a.cota) - ordemCota(b.cota)) || ((Number(a.clas) || 9999) - (Number(b.clas) || 9999)) :
+        (daChamada(a) ? a.ch.t - b.ch.t : posicaoAC(a.outras) - posicaoAC(b.outras))) ||
       a.nome.localeCompare(b.nome, 'pt-BR');
   });
 
@@ -1022,16 +1340,19 @@ function desenharLista() {
       const info = cfg.cursos.filter(function (c) { return c.nome === v.curso; })[0];
       itens.push(el('h2', { class: 'grupo-curso' }, v.curso || 'Sem curso', info ? el('small', { text: info.vagas + ' vagas' }) : null));
     }
-    const grupo = ehAprovado(v) ? 'cota:' + v.cota : 'fora:' + v.lista;
+    const grupo = grupoDe(v);
     if (grupo !== grupoAtual) {
       grupoAtual = grupo;
-      const quantos = mostrar.filter(function (x) { return x.curso === v.curso && (ehAprovado(x) ? 'cota:' + x.cota : 'fora:' + x.lista) === grupo; }).length;
-      const rotulo = ehAprovado(v) ? (v.cota === 'AC' ? 'Ampla concorrência (AC)' : v.cota + ': ' + (ROTULO_COTA[v.cota] || 'reserva de vaga')) : (v.lista || 'Sem lista') + ': não está entre os aprovados';
+      const quantos = mostrar.filter(function (x) { return x.curso === v.curso && grupoDe(x) === grupo; }).length;
+      const rotulo = ehAprovado(v) ? (v.cota === 'AC' ? 'Ampla concorrência (AC)' : v.cota + ': ' + (ROTULO_COTA[v.cota] || 'reserva de vaga')) :
+        (daChamada(v) ? 'Chamada dos classificáveis: com vaga' : (v.lista || 'Sem lista') + ': não está entre os aprovados');
       itens.push(el('h3', { class: 'grupo-cota', text: rotulo + ' (' + quantos + ')' }));
     }
     const meta = ['Inscrição ' + v.insc];
-    if (!ehAprovado(v) && v.outras) meta.push(v.outras);
+    if (daChamada(v)) meta.push(Regra.textoDaVaga(v.cota, v.ch.o));
+    else if (!ehAprovado(v) && v.outras) meta.push(v.outras);
     const marcas = [];
+    if (v.ch && v.ch.e === 'A') marcas.push('ausente na chamada');
     if (v.banca && Logica.chave(v.hetero).indexOf('deferida') !== 0) marcas.push('banca: ' + v.hetero.toLowerCase());
     if (v.depois) marcas.push('entregar depois');
     itens.push(el('button', { class: 'pessoa', type: 'button', 'data-insc': v.insc, 'data-foco': 'pessoa:' + v.insc, 'aria-current': estado.aberto === v.insc ? 'true' : null,
@@ -1069,7 +1390,7 @@ function desenharFicha() {
   if (fichaMontada !== insc) montarFicha(painel, insc);
   const cfg = estado.config, v = visao(insc);
   const tipo = Logica.tipoSituacao(v.situacao);
-  const aprovado = v.lista === cfg.aprovado;
+  const aprovado = v.lista === cfg.aprovado, chamado = daChamada(v);
   pecas.folha.className = 'folha ' + Logica.classeDaSituacao(v.situacao);
   pecas.barra.className = 'barra-ficha ' + Logica.classeDaSituacao(v.situacao);
   pecas.barraNome.textContent = v.nome;
@@ -1086,10 +1407,20 @@ function desenharFicha() {
 
   // avisos da ficha
   const alertas = [];
-  if (!aprovado) {
+  if (chamado && aprovado) {
+    alertas.push(elVoltaNaFicha(v));
+  } else if (chamado) {
+    // classificável confirmado na chamada: a ficha diz a vaga, e daqui em diante ele é atendido como um aprovado
+    alertas.push(el('p', { class: 'alerta vaga', id: 'ficha-vaga' }, 'Chamada dos classificáveis. ',
+      el('span', { text: Regra.textoDaVaga(v.cota, v.ch.o).replace(/^v/, 'V') + ', pela ' + Regra.nomeDaLista(v.ch.l || Regra.GERAL) + (v.ch.em ? ', em ' + v.ch.em : '') + '.' +
+        (v.ch.tr ? ' Vaga trocada à mão.' : '') + (tipo === 'fixa' ? ' Com esta situação, a vaga fica liberada para a chamada.' : '') })));
+  } else if (!aprovado) {
     alertas.push(el('p', { class: 'alerta atencao' }, (v.lista || 'Sem lista') + '. ',
-      el('span', { text: 'Não está entre os aprovados desta chamada' + (v.cota ? ' (já esteve, na cota ' + v.cota + ').' : '.') })));
+      el('span', { text: 'Não está entre os aprovados desta chamada' + (v.cota ? ' (já esteve, na cota ' + v.cota + ').' : '.') +
+        (v.ch && v.ch.e === 'A' ? ' Ausente na chamada dos classificáveis (' + Regra.nomeDaLista(v.ch.l || Regra.GERAL) + ', ' + v.ch.em + ').' : '') +
+        (v.ch && v.ch.e === 'R' ? ' Reintegrado à chamada dos classificáveis em ' + v.ch.em + '.' : '') })));
   }
+  if (chamado) alertas.push(elBalcaoNaFicha(v, insc, tipo));
   if (tipo === 'fixa') {
     alertas.push(el('p', { class: 'alerta ' + Logica.classeDaSituacao(v.situacao) }, v.situacao + '. ',
       el('span', { text: v.motivo ? 'Motivo: ' + v.motivo + '.' : 'Os documentos não mudam esta situação.' }),
@@ -1131,8 +1462,8 @@ function desenharFicha() {
   }
 
   // situação posta à mão
-  pecas.blocoSituacao.hidden = tipo === 'fixa' || !aprovado;
-  pecas.motivos.hidden = !estado.painelMotivo || tipo === 'fixa' || !aprovado;
+  pecas.blocoSituacao.hidden = tipo === 'fixa' || !(aprovado || chamado);
+  pecas.motivos.hidden = !estado.painelMotivo || tipo === 'fixa' || !(aprovado || chamado);
   pecas.botaoIndeferir.setAttribute('aria-expanded', estado.painelMotivo ? 'true' : 'false');
 
   // textos: não mexe no campo em que a pessoa está digitando
@@ -1148,6 +1479,7 @@ function desenharFicha() {
   pecas.barraGravacao.className = pendente && estado.falha ? 'falhou' : '';
   pecas.barraGravacao.disabled = !(pendente && estado.falha);
   pecas.alteracao.textContent = v.atualizado ? 'Última alteração em ' + v.atualizado + (v.atendente ? ', por ' + v.atendente : '') + '.' : 'Sem alterações ainda.';
+  travarPeloBalcao(v, tipo);
 }
 
 /** Monta as partes fixas da ficha de uma pessoa. As partes que mudam são preenchidas em desenharFicha. */
@@ -1334,6 +1666,7 @@ function entrar(evento) {
     $('app').hidden = false;
     desenhar();
     bombear();
+    bombearChamada();
     agendarConsulta();
   });
 }
@@ -1381,6 +1714,9 @@ function ligarEventos() {
     if (acao === 'link') linkDaEquipe();
     if (acao === 'imprimir') abrirImpressao();
     if (acao === 'balanco') abrirImpressao('balanco');
+    if (acao === 'chamada') abrirChamada();
+    if (acao === 'publicar') abrirImpressao('publicar');
+    if (acao === 'balcao') abrirBalcao();
     if (acao === 'sair') {
       if (temPendencia() && !window.confirm('Há marcações que ainda não foram salvas. Sair assim mesmo?')) return;
       esquecer();
@@ -1392,6 +1728,8 @@ function ligarEventos() {
     if (e.key === 'Escape') {
       if (!$('lembrete').hidden) $('lembrete').hidden = true;
       else if (!$('impressao').hidden) fecharImpressao();
+      else if (!$('balcao').hidden) fecharBalcao();
+      else if (!$('chamada').hidden) { if (cham.troca) { cham.troca = null; desenhar(); } else fecharChamada(); }
       else if (!menu.hidden) fecharMenu();
       else if (estado.painelMotivo) { estado.painelMotivo = false; desenhar(); }
       else if (estado.aberto && window.matchMedia('(max-width: 899px)').matches) fechar(false);
@@ -1402,7 +1740,7 @@ function ligarEventos() {
   window.addEventListener('popstate', function () { fechar(true); });
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) clearTimeout(temporizadorConsulta);
-    else if (estado.config && !estado.bloqueado) { consultar(); bombear(); desenhar(); }
+    else if (estado.config && !estado.bloqueado) { consultar(); bombear(); bombearChamada(); desenhar(); }
   });
   window.addEventListener('online', tentarAgora);
   window.addEventListener('beforeunload', function (e) {
@@ -1469,7 +1807,7 @@ function carregarInicio() {
 /* 8. Impressão (pede a planilha na versão 8): tiras do checklist, lista   */
 /*    de pendências, lembretes e tiras em branco; "o que falta" na tela    */
 /* ====================================================================== */
-const MODOS = [['tiras', 'Tiras do checklist'], ['pendencias', 'Lista de pendências'], ['lembretes', 'Lembretes em branco'], ['brancas', 'Tiras em branco'], ['balanco', 'Balanço de vagas']];
+const MODOS = [['tiras', 'Tiras do checklist'], ['pendencias', 'Lista de pendências'], ['lembretes', 'Lembretes em branco'], ['brancas', 'Tiras em branco'], ['balanco', 'Balanço de vagas'], ['publicar', 'Para publicar']];
 const GRUPOS_DE_TIRAS = [['nova', 'Novas'], ['mudou', 'Mudaram desde a última impressão'], ['igual', 'Já impressas'], ['indeferida', 'Indeferidas (só entram se você marcar)']];
 const imp = { modo: 'tiras', escolhidos: {}, pendencias: false, filtro: '', impressos: null, enviando: false, erro: '', lembretes: 6, brancas: null };
 const impPecas = {};
@@ -1700,7 +2038,9 @@ function folhaDePendencias(cfg) {
  * Conta, para cada curso, os aprovados de cada cota pela situação. Seguram a vaga: "Concluída" e "Pendência".
  * Liberam a vaga: as situações postas à mão ("Indeferida", "Não compareceu") e quem ainda está "Aguardando".
  * A vaga ociosa fica na cota em que a pessoa foi aprovada; o remanejamento entre cotas não é feito aqui.
- * Classificável que já foi atendido (concluída ou com pendência) ocupa uma das vagas ociosas do curso.
+ * Classificável confirmado na chamada (planilha na versão 10) ocupa a vaga desde o "Presente" e desconta da cota de origem
+ * da vaga; o +1 da troca manual não tem origem e aparece à parte. Sem registro de chamada, o classificável que já foi
+ * atendido (concluída ou com pendência) ocupa uma das vagas ociosas do curso.
  */
 function dadosDoBalanco(cfg) {
   const todos = Object.keys(estado.candidatos).map(visao);
@@ -1708,7 +2048,8 @@ function dadosDoBalanco(cfg) {
   const soma = function (o) { return cfg.cotas.reduce(function (s, k) { return s + o[k]; }, 0); };
   return cfg.cursos.map(function (c) {
     const d = { curso: c.nome, vagas: Number(c.vagas) || 0, anexo: c.anexo || null, aprovados: zeros(), seguram: zeros(), liberadas: zeros(), aguardando: zeros(),
-      ociosas: zeros(), lista: zeros(), semCota: 0, naLista: 0, chamados: 0 };
+      ociosas: zeros(), lista: zeros(), semCota: 0, naLista: 0, chamados: 0,
+      chUsadas: zeros(), chSaldo: zeros(), chMais1: zeros(), chTotal: 0, chSA: 0, chSemOrigem: 0 };
     todos.forEach(function (v) {
       if (v.curso !== c.nome) return;
       const tipo = Logica.tipoSituacao(v.situacao);
@@ -1716,12 +2057,21 @@ function dadosDoBalanco(cfg) {
       if (v.lista === cfg.aprovado) {
         if (!(v.cota in d.aprovados)) { d.semCota++; return; }
         d.aprovados[v.cota]++;
-        if (segura) d.seguram[v.cota]++;
+        if (segura || (daChamada(v) && tipo !== 'fixa')) d.seguram[v.cota]++;
         else if (tipo === 'fixa') d.liberadas[v.cota]++;
         else d.aguardando[v.cota]++;
+      } else if (daChamada(v)) {
+        // confirmado na chamada: ocupa a vaga desde o "Presente", antes mesmo dos documentos; indeferido depois, libera
+        if (tipo !== 'fixa') {
+          d.chTotal++;
+          if (v.ch.o in d.chUsadas) d.chUsadas[v.ch.o]++;
+          else if (v.ch.o === Regra.SEM) d.chSA++;
+          else if (v.cota in d.chMais1) d.chMais1[v.cota]++;
+          else d.chSemOrigem++;
+        }
       } else if (segura) {
         d.chamados++;
-      } else if (tipo !== 'fixa') {
+      } else if (tipo !== 'fixa' && !(v.ch && v.ch.e === 'A')) {
         d.naLista++;
         const vistas = {};
         String(v.outras || '').replace(/([A-Z][A-Z_]*)\s+\d+/g, function (tudo, cota) {
@@ -1734,7 +2084,8 @@ function dadosDoBalanco(cfg) {
     d.totalAprovados = soma(d.aprovados) + d.semCota;
     d.semAprovado = Math.max(0, d.vagas - d.totalAprovados);
     d.totalOciosas = soma(d.ociosas);
-    d.aOfertar = Math.max(0, d.totalOciosas + d.semAprovado - d.chamados);
+    cfg.cotas.forEach(function (k) { d.chSaldo[k] = d.ociosas[k] - d.chUsadas[k]; });
+    d.aOfertar = Math.max(0, d.totalOciosas + d.semAprovado - d.chamados - d.chTotal);
     d.soma = soma;
     return d;
   });
@@ -1744,13 +2095,21 @@ function folhaDoBalanco(cfg) {
   const numero = function (n, forte) { return el('td', { class: (n ? '' : 'zero') + (forte ? ' forte' : ''), text: String(n) }); };
   const linha = function (d, rotulo, valores, total, classe) {
     return el('tr', { class: classe || null }, el('th', { scope: 'row', text: rotulo }),
-      cfg.cotas.map(function (k) { return numero(valores[k] || 0, classe === 'ociosas'); }), numero(total, true));
+      cfg.cotas.map(function (k) { return numero(valores[k] || 0, classe === 'ociosas' || classe === 'saldo'); }), numero(total, true));
   };
   const blocos = dados.map(function (d) {
     const anexo = d.anexo ? (function () { const o = {}; cfg.cotas.forEach(function (k) { o[k] = Number(d.anexo[k]) || 0; }); return o; })() : null;
     const notas = [];
     if (d.semAprovado) notas.push(el('div', {}, 'Vagas sem aprovado no resultado: ', el('b', { text: String(d.semAprovado) }), ' (' + d.vagas + ' vagas no curso, ' + d.totalAprovados + (d.totalAprovados === 1 ? ' aprovado)' : ' aprovados)')));
     if (d.chamados) notas.push(el('div', {}, 'Classificáveis já atendidos, que ocupam vaga (concluídas e com pendência): ', el('b', { text: String(d.chamados) })));
+    if (d.chTotal) {
+      const extras = [];
+      if (d.chSA) extras.push(d.chSA + ' em vaga sem aprovado no resultado');
+      const mais1 = cfg.cotas.filter(function (k) { return d.chMais1[k]; }).map(function (k) { return (k === 'AC' ? 'ampla' : k) + ' ' + d.chMais1[k]; });
+      if (mais1.length) extras.push('+1 por troca manual: ' + mais1.join(', '));
+      if (d.chSemOrigem) extras.push(d.chSemOrigem + ' sem origem informada');
+      notas.push(el('div', {}, 'Classificáveis com vaga pela chamada: ', el('b', { text: String(d.chTotal) }), extras.length ? ' (' + extras.join('; ') + ')' : ''));
+    }
     if (d.semCota) notas.push(el('div', { text: 'Atenção: ' + d.semCota + (d.semCota === 1 ? ' aprovado está sem cota na planilha e ficou' : ' aprovados estão sem cota na planilha e ficaram') + ' fora do quadro.' }));
     if (d.totalAprovados > d.vagas) notas.push(el('div', { text: 'Atenção: há mais aprovados (' + d.totalAprovados + ') do que vagas (' + d.vagas + '). Confira as vagas do curso na aba Config.' }));
     return el('section', { class: 'bal-curso', 'data-curso': d.curso },
@@ -1764,6 +2123,8 @@ function folhaDoBalanco(cfg) {
           linha(d, 'Liberadas (indeferidas e não compareceram)', d.liberadas, d.soma(d.liberadas), 'liberadas'),
           linha(d, 'Ainda aguardando', d.aguardando, d.soma(d.aguardando), 'aguardando'),
           linha(d, 'Vagas ociosas', d.ociosas, d.totalOciosas, 'ociosas'),
+          d.chTotal ? linha(d, 'Ocupadas na chamada dos classificáveis', d.chUsadas, d.soma(d.chUsadas), 'ch-usadas') : null,
+          d.chTotal ? linha(d, 'Saldo (ociosas menos ocupadas na chamada)', d.chSaldo, d.soma(d.chSaldo), 'saldo') : null,
           linha(d, 'Classificáveis na lista', d.lista, d.naLista, 'lista'))),
       notas.length ? el('div', { class: 'bal-notas' }, notas) : null);
   });
@@ -1772,7 +2133,8 @@ function folhaDoBalanco(cfg) {
     blocos.length ? blocos : el('p', { text: 'Nenhum curso na aba Config da planilha.' }),
     el('div', { class: 'bal-legenda' },
       el('div', { text: 'Vagas ociosas = liberadas + ainda aguardando, na cota em que a pessoa foi aprovada. O remanejamento entre cotas não está aplicado.' }),
-      el('div', { text: 'Vagas ociosas no curso = vagas ociosas + vagas sem aprovado no resultado − classificáveis já atendidos.' }),
+      el('div', { text: 'Vagas ociosas no curso = vagas ociosas + vagas sem aprovado no resultado − ' +
+        (dados.some(function (d) { return d.chTotal; }) ? 'classificáveis com vaga (pela chamada, ou já atendidos).' : 'classificáveis já atendidos.') }),
       el('div', { text: 'Classificáveis na lista: quem ainda aguarda em cada lista. Quem está em mais de uma lista conta uma vez no total.' }))
   ];
 }
@@ -1809,7 +2171,7 @@ function quantidadesEmBranco(cfg) {
 function abrirImpressao(modo) {
   const painel = $('impressao');
   if (typeof modo === 'string') imp.modo = modo;
-  else if (imp.modo === 'balanco') imp.modo = 'tiras';      // "Imprimir" abre nas tiras; o balanço tem o seu item no menu
+  else if (imp.modo === 'balanco' || imp.modo === 'publicar') imp.modo = 'tiras';      // "Imprimir" abre nas tiras; o balanço tem o seu item no menu
   if (!impPecas.modos) {
     impPecas.modos = el('div', { class: 'imp-modos', role: 'group', 'aria-label': 'O que imprimir' });
     impPecas.opcoes = el('div', { class: 'imp-opcoes' });
@@ -1844,7 +2206,8 @@ function montarOpcoes() {
     campo.addEventListener('input', function () { aoMudar(Math.max(0, Math.min(maximo, Math.floor(Number(campo.value) || 0)))); montarFolhas(); });
     return campo;
   };
-  impPecas.titulo.textContent = imp.modo === 'balanco' ? 'Balanço de vagas' : 'Imprimir';
+  impPecas.titulo.textContent = imp.modo === 'balanco' ? 'Balanço de vagas' : (imp.modo === 'publicar' ? 'Para publicar: quadro e listas' : 'Imprimir');
+  impPecas.avisosPub = null;
   impPecas.botao = el('button', { class: 'botao principal', type: 'button', id: 'imp-botao', onclick: imprimirAgora });
   impPecas.lista = null;
   imp.filtro = '';
@@ -1869,6 +2232,8 @@ function montarOpcoes() {
       temAnexo ? null : el('p', { text: Number(cfg.versao) >= 9 ? 'Para ver a linha do Anexo I, digite as vagas de cada cota na aba Config da planilha (colunas "Anexo I: ...", na linha de cada curso) e use "Atualizar agora".' :
         'A linha de referência do Anexo I aparece quando a planilha estiver na versão 9.' }),
       el('div', { class: 'imp-linha' }, impPecas.botao)];
+  } else if (imp.modo === 'publicar') {
+    partes = opcoesParaPublicar(cfg);
   } else if (imp.modo === 'lembretes') {
     impPecas.botao.textContent = 'Imprimir os lembretes';
     partes = [el('p', { text: 'Papel para marcar à mão o que falta e entregar ao candidato. Em geral saem três por folha: é só cortar na horizontal.' }),
@@ -1942,6 +2307,9 @@ function montarFolhas() {
     conteudo = folhaDePendencias(cfg);
   } else if (imp.modo === 'balanco') {
     conteudo = folhaDoBalanco(cfg);
+  } else if (imp.modo === 'publicar') {
+    conteudo = folhaParaPublicar(cfg);
+    if (impPecas.avisosPub) trocarFilhos(impPecas.avisosPub, avisosParaPublicar(dadosParaPublicar(cfg)).map(function (a) { return el('p', { text: a }); }));
   } else if (imp.modo === 'lembretes') {
     const d = dadosDoLembrete(cfg), itens = [];
     for (let i = 0; i < imp.lembretes; i++) itens.push(elLembrete(cfg, d));
@@ -2049,6 +2417,925 @@ function montarFiltroDeCota(todos) {
 }
 estado.cota = '';
 $('filtro-cota').addEventListener('change', function () { estado.cota = $('filtro-cota').value; desenhar(); });
+
+/* ====================================================================== */
+/* 9. Chamada dos classificáveis (pede a planilha na versão 10)            */
+/*    A regra é calculada aqui (Regra.calcular) a cada desenho, a partir   */
+/*    do que a planilha guarda de cada pessoa. "Presente", "Ausente" e     */
+/*    "Reintegrar" aparecem na hora e são enviados em fila, na ordem; os   */
+/*    demais pedidos (troca, desfazer) travam os botões até a resposta.    */
+/* ====================================================================== */
+const cham = { curso: '', fila: [], enviando: null, falha: '', tentativas: 0, pausaAte: 0, troca: null, desfeitas: [], pecas: null, proximo: '', trancadoAte: 0, busca: '', chave: false, retorno: false };
+let temporizadorChamada = 0;
+
+function temChamada() { const cfg = estado.config; return !!(cfg && Number(cfg.versao) >= 10 && cfg.chamada); }
+/** Classificável confirmado na chamada (presente): ocupa vaga, a não ser que depois tenha sido indeferido. */
+function daChamada(v) { return !!(v && v.ch && v.ch.e === 'P'); }
+function horaLocal(t) { const d = new Date(t); return doisDigitos(d.getDate()) + '/' + doisDigitos(d.getMonth() + 1) + ' ' + doisDigitos(d.getHours()) + ':' + doisDigitos(d.getMinutes()); }
+function soHora(em) { return String(em || '').slice(-5); }
+function opsPendentes() { return (cham.enviando ? [cham.enviando] : []).concat(cham.fila); }
+function chamadaPendente(insc) { return opsPendentes().some(function (o) { return o.insc === insc; }); }
+function chamadaOcupada() { return opsPendentes().some(function (o) { return !o.otimista; }); }
+
+/** A pessoa com o que ainda está a caminho da planilha (presente, ausente, reintegrar), para a tela seguir sem esperar. */
+function comChamada(v) {
+  const ops = opsPendentes().filter(function (o) { return o.insc === v.insc && o.otimista; });
+  if (!ops.length) return v;
+  const a = v.ch || {};
+  const ch = { e: a.e || '', l: a.l || '', o: a.o || '', em: a.em || '', t: a.t || 0, por: a.por || '', tr: a.tr || '' };
+  ops.forEach(function (o) {
+    if (o.op === 'presenca') {                          // registro de presença: aparece na hora, como o resto
+      if (o.valor) v.pr = { t: o.t, em: horaLocal(o.t), por: estado.nome }; else delete v.pr;
+      return;
+    }
+    ch.t = o.t; ch.em = horaLocal(o.t); ch.por = estado.nome;
+    if (o.op === 'presente') {
+      ch.e = 'P'; ch.l = o.lista; ch.o = o.origem; ch.tr = o.manual ? 'regra: ' + o.regra.cota + '/' + o.regra.origem : '';
+      v.cota = o.cota;
+      if (!v.situacao) v.situacao = estado.config.nomes.aguardando;
+    } else if (o.op === 'ausente') { ch.e = 'A'; ch.l = o.lista; ch.o = ''; ch.tr = ''; }
+    else if (o.op === 'reintegrar') ch.e = 'R';
+  });
+  if (ch.e || a.e !== undefined) v.ch = ch;
+  v.local = true;
+  return v;
+}
+
+/** Põe um pedido da chamada na fila de envio. Cada pedido leva um "id": se o envio for repetido, a planilha não o executa duas vezes. */
+function pedirChamada(op) {
+  op.t = Date.now();
+  op.id = op.t.toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  if (op.acao === 'dia') {
+    /* presença, chave e balcão não entram no "Desfazer última ação" */
+  } else if (op.op === 'desfazer') {
+    for (let k = cham.desfeitas.length - 1; k >= 0; k--) if (cham.desfeitas[k].insc === op.insc) { cham.desfeitas.splice(k, 1); break; }
+  } else {
+    cham.desfeitas.push({ insc: op.insc, op: op.op });
+  }
+  cham.fila.push(op);
+  desenhar();
+  bombearChamada();
+}
+
+/** Envia o próximo pedido da chamada. Um por vez, na ordem em que foram feitos. */
+function bombearChamada() {
+  clearTimeout(temporizadorChamada);
+  if (cham.enviando || estado.bloqueado || !cham.fila.length) return;
+  const agora = Date.now();
+  if (agora < cham.pausaAte) { temporizadorChamada = setTimeout(bombearChamada, cham.pausaAte - agora + 5); return; }
+  const op = cham.fila.shift();
+  cham.enviando = op;
+  desenhar();
+  const pedido = { acao: 'chamada', atendente: estado.nome };
+  Object.keys(op).forEach(function (k) { if (k !== 't' && k !== 'otimista' && k !== 'depois') pedido[k] = op[k]; });
+  chamar(pedido).then(function (r) {
+    cham.enviando = null;
+    if (r.ok) {
+      (r.candidatos || []).forEach(function (c) { estado.candidatos[c.insc] = c; estado.gravadoEm[c.insc] = Date.now(); });
+      if (Array.isArray(r.soPresentes) && estado.config) estado.config.soPresentes = r.soPresentes;
+      cham.falha = ''; cham.tentativas = 0; cham.pausaAte = 0;
+      if (op.depois) { try { op.depois(r); } catch (e) { /* o que vem depois não pode travar a fila */ } }
+      // balcão: a resposta só traz quem este pedido mudou; busca logo o que os outros atendentes fizeram
+      if (op.acao === 'dia' && op.op !== 'presenca') setTimeout(function () { consultar(true); }, 0);
+    } else if (r.erro === 'codigo' || r.erro === 'sem_codigo') {
+      cham.fila.unshift(op);
+      pedirEntrada(r.mensagem);
+    } else if (r.erro === 'rede' || r.erro === 'ocupada' || r.erro === 'resposta') {
+      // não chegou ou a planilha estava ocupada: o mesmo pedido volta para a frente da fila e é tentado de novo
+      cham.fila.unshift(op);
+      cham.tentativas++;
+      cham.falha = r.erro === 'ocupada' ? 'A planilha está ocupada.' : (r.erro === 'rede' ? 'Sem conexão.' : 'A planilha não respondeu direito.');
+      cham.pausaAte = Date.now() + Math.min(4000 * cham.tentativas, 30000);
+    } else {
+      // a planilha recusou: este pedido e os que vinham depois dele (feitos contando com ele) não valem
+      const perdidos = cham.fila.length;
+      cham.fila = []; cham.desfeitas = []; cham.troca = null; cham.falha = ''; cham.tentativas = 0; cham.pausaAte = 0;
+      if (op.depois) { try { op.depois(r); } catch (e) { /* idem */ } }
+      avisar((r.mensagem || 'A planilha recusou o pedido.') + (perdidos ? ' ' + (perdidos === 1 ? 'O pedido seguinte não foi enviado' : 'Os ' + perdidos + ' pedidos seguintes não foram enviados') + ': confira a chamada.' : ''));
+      consultar(true);
+    }
+    desenhar();
+    bombearChamada();
+  });
+}
+
+/** Tudo o que a chamada de um curso precisa: a entrada da regra, o resultado dela e as pessoas pela inscrição. */
+function dadosDaChamada(cfg, curso, todos) {
+  const bal = dadosDoBalanco(cfg).filter(function (d) { return d.curso === curso; })[0] || null;
+  const ociosas = {};
+  cfg.cotas.forEach(function (k) { ociosas[k] = bal ? bal.ociosas[k] : 0; });
+  ociosas[Regra.SEM] = bal ? bal.semAprovado : 0;
+  const porInsc = {};
+  const pessoas = todos.filter(function (v) { return v.curso === curso && v.lista === cfg.classificavel; }).map(function (v) {
+    porInsc[v.insc] = v;
+    const tipo = Logica.tipoSituacao(v.situacao), ch = v.ch || {};
+    // atendido direto na planilha, sem registro de chamada (contingência): ocupa uma vaga do curso, sem cota de origem
+    const aMao = !ch.e && (tipo === 'concluida' || tipo === 'pendencia');
+    return { insc: v.insc, pos: Regra.posicoes(v.outras), e: aMao ? 'P' : (ch.e || ''), cota: v.cota, o: ch.o || '', fixa: tipo === 'fixa', presenca: !!v.pr };
+  });
+  const entrada = { vagas: bal ? bal.vagas : 0, seguram: bal ? bal.soma(bal.seguram) : 0, ociosas: ociosas, pessoas: pessoas, soPresentes: soPresentesEm(cfg, curso) };
+  return { curso: curso, entrada: entrada, r: Regra.calcular(entrada), porInsc: porInsc, bal: bal };
+}
+
+function abrirChamada() {
+  const cfg = estado.config;
+  if (!cfg) return;
+  if (!temChamada()) {
+    avisar(Number(cfg.versao) >= 10 ? 'A planilha ainda não tem as colunas da chamada. Nela, use o menu Pré-matrícula > 1. Montar ou conferir a base.' : 'A chamada dos classificáveis pede a planilha na versão 10.');
+    return;
+  }
+  const painel = $('chamada');
+  if (!cham.pecas) {
+    const P = cham.pecas = {
+      cursos: el('div', { class: 'ch-cursos', role: 'group', 'aria-label': 'Curso' }), gravacao: el('span', { class: 'ch-gravacao', role: 'status' }),
+      tentar: el('button', { class: 'botao pequeno', type: 'button', id: 'ch-tentar', text: 'Tentar agora', onclick: tentarAgora }),
+      avisos: el('div', { class: 'ch-avisos' }), esq: el('div', {}), dir: el('div', {}),
+      busca: el('input', { type: 'search', id: 'ch-busca', placeholder: 'Buscar nome ou inscrição: presença, reintegrar, ficha', 'aria-label': 'Buscar classificável', autocomplete: 'off', spellcheck: 'false' }),
+      forma: el('div', { class: 'ch-forma' }), achados: el('div', {}), abas: el('div', { class: 'ch-abas', role: 'group', 'aria-label': 'O que mostrar' }), historico: el('div', { class: 'ch-historico', hidden: true })
+    };
+    P.busca.addEventListener('input', function () { cham.busca = P.busca.value; desenharChamada(); });
+    trocarFilhos(painel,
+      el('div', { class: 'ch-topo' }, el('h2', { text: 'Chamada dos classificáveis' }), P.cursos, P.gravacao, P.tentar,
+        el('button', { class: 'botao pequeno', type: 'button', id: 'ch-atualizar', text: 'Atualizar', title: 'Busca agora na planilha o que mudou (a tela também faz isso sozinha, a cada poucos segundos)',
+          onclick: function () { estado.semResposta = 0; consultar(true); } }),
+        el('button', { class: 'botao pequeno', type: 'button', id: 'ch-fechar', text: 'Fechar', onclick: fecharChamada })),
+      el('div', { class: 'ch-barra' }, P.busca, P.forma, P.abas), P.avisos, P.achados, (P.corpo = el('div', { class: 'ch-corpo' }, P.esq, P.dir)), P.historico);
+  }
+  if (!cham.curso && estado.curso) cham.curso = estado.curso;
+  cham.proximo = '';
+  painel.hidden = false;
+  document.body.classList.add('com-chamada');
+  desenharChamada();
+  painel.scrollTop = 0;
+}
+function fecharChamada() {
+  $('chamada').hidden = true;
+  cham.troca = null;
+  document.body.classList.remove('com-chamada');
+}
+function fichaPelaChamada(insc) {
+  fecharChamada();
+  abrir(insc);
+}
+
+function desenharChamada() {
+  const painel = $('chamada');
+  if (painel.hidden || !cham.pecas || !estado.config) return;
+  if (!temChamada()) { fecharChamada(); return; }
+  const cfg = estado.config, P = cham.pecas;
+  const todos = Object.keys(estado.candidatos).map(visao);
+  const cursos = cfg.cursos.map(function (c) { return c.nome; }).filter(function (nome) { return todos.some(function (v) { return v.curso === nome && (v.lista === cfg.classificavel || temRetorno(v)); }); });
+  if (cursos.indexOf(cham.curso) < 0) cham.curso = cursos[0] || '';
+  trocarFilhos(P.cursos, cursos.map(function (nome) {
+    return el('button', { class: 'botao pequeno', type: 'button', 'aria-pressed': cham.curso === nome ? 'true' : 'false', 'data-curso': nome, 'data-foco': 'ch-curso:' + nome, text: nome,
+      onclick: function () { cham.curso = nome; cham.troca = null; cham.proximo = ''; desenhar(); } });
+  }));
+  const pendentes = opsPendentes().length;
+  P.gravacao.textContent = cham.falha ? 'Não gravou. ' + cham.falha + ' Tentando de novo.' : (pendentes ? 'Gravando…' : 'Tudo gravado');
+  P.gravacao.className = 'ch-gravacao' + (cham.falha ? ' erro' : '');
+  P.tentar.hidden = !cham.falha;
+  if (!cham.curso) {
+    trocarFilhos(P.forma); trocarFilhos(P.achados); trocarFilhos(P.abas);
+    trocarFilhos(P.avisos);
+    trocarFilhos(P.esq, el('p', { class: 'ch-vazio', text: 'Nenhum curso tem classificáveis na planilha.' }));
+    trocarFilhos(P.dir);
+    return;
+  }
+  const d = dadosDaChamada(cfg, cham.curso, todos);
+  trocarFilhos(P.avisos, avisosDaChamada(d));
+  trocarFilhos(P.forma, elForma(d));
+  trocarFilhos(P.achados, elAchados(d, todos));
+  desenharAbas(d);
+  const nomes = P.esq.querySelector('.ch-nomes'), chamados = P.dir.querySelector('.ch-chamados');
+  const y1 = nomes ? nomes.scrollTop : 0, y2 = chamados ? chamados.scrollTop : 0;
+  trocarFilhos(P.esq, elVagaEProximo(d), elTroca(d), elListaNaVez(d));
+  trocarFilhos(P.dir, elQuadro(d), elChamados(d), elRetorno(d, todos));
+  // a lista na vez acompanha o próximo nome; fora isso, as rolagens ficam onde estavam
+  const novaLista = P.esq.querySelector('.ch-nomes'), novosChamados = P.dir.querySelector('.ch-chamados');
+  const proximo = d.r.vaga ? d.r.vaga.proximo : '';
+  if (novaLista) {
+    const li = novaLista.querySelector('li.proximo');
+    if (li && proximo !== cham.proximo) novaLista.scrollTop = Math.max(0, li.offsetTop - 2 * li.offsetHeight);
+    else novaLista.scrollTop = y1;
+  }
+  if (novosChamados && proximo === cham.proximo) novosChamados.scrollTop = y2;
+  cham.proximo = proximo;
+}
+
+function avisosDaChamada(d) {
+  const avisos = [], r = d.r;
+  const aguardando = d.bal ? d.bal.soma(d.bal.aguardando) : 0;
+  if (aguardando) {
+    avisos.push(el('p', {}, el('b', { text: aguardando === 1 ? '1 aprovado ainda está em "Aguardando". ' : aguardando + ' aprovados ainda estão em "Aguardando". ' }),
+      'As vagas deles contam como ociosas, como no balanço.'));
+  }
+  if (r.excesso) {
+    avisos.push(el('p', {}, el('b', { text: 'Confira o balanço. ' }), (r.excesso === 1 ? 'Há 1 vaga ocupada na chamada' : 'Há ' + r.excesso + ' vagas ocupadas na chamada') +
+      ' além das vagas ociosas da cota de origem (um aprovado pode ter regularizado a situação depois).'));
+  }
+  if (r.ocupadas > d.entrada.vagas) {
+    avisos.push(el('p', {}, el('b', { text: 'Curso acima do total. ' }), 'Há ' + r.ocupadas + ' pessoas com vaga para ' + d.entrada.vagas + ' vagas.'));
+  }
+  return avisos;
+}
+
+/** O que acontece com quem ocupar a vaga em chamada: [origem que a regra indica, cota que a pessoa terá]. */
+function elVagaEProximo(d) {
+  const r = d.r, vaga = r.vaga;
+  if (!vaga) {
+    let texto = 'Todas as vagas ociosas foram preenchidas.';
+    if (r.livres) texto = 'O total de vagas do curso foi atingido.';
+    else if (!r.comVaga && !Regra.ORIGENS.some(function (o) { return r.quadro[o].ociosas; })) texto = 'Não há vagas ociosas neste curso.';
+    return el('section', { class: 'ch-bloco' }, el('div', { class: 'ch-vaga fim' }, el('div', { class: 'ch-rotulo', text: 'Chamada de ' + d.curso }), el('p', { class: 'ch-grande', text: texto }),
+      r.livres ? el('p', { text: (r.semOferta === 1 ? 'Sobrou 1 vaga, que fica sem oferta' : 'Sobraram ' + r.semOferta + ' vagas, que ficam sem oferta') + ': há vaga a mais dada por troca manual (+1).' }) : null));
+  }
+  const q = r.quadro[vaga.origem];
+  const titulo = vaga.origem === Regra.SEM ? 'Vaga sem aprovado no resultado' : 'Vaga de ' + Regra.nomeDaVaga(vaga.origem);
+  // caminho da vaga: as listas puladas, com o motivo (vizinhas com o mesmo motivo ficam juntas), e a lista na vez
+  const trechos = [];
+  vaga.caminho.forEach(function (c) {
+    const ultimo = trechos[trechos.length - 1];
+    if (ultimo && c.motivo && ultimo.motivo === c.motivo) ultimo.listas.push(c.lista);
+    else trechos.push({ listas: [c.lista], motivo: c.motivo });
+  });
+  const caminho = vaga.caminho.length > 1 ? el('ol', { class: 'ch-caminho', 'aria-label': 'Caminho da vaga' }, trechos.map(function (g) {
+    return el('li', { class: g.motivo ? null : 'vez' }, el('b', { text: g.listas.map(function (l) { return l === Regra.GERAL ? 'Lista geral' : l; }).join(', ') }), ': ' + (g.motivo || 'na vez'));
+  })) : null;
+  if (!vaga.proximo) {
+    return el('section', { class: 'ch-bloco' }, el('div', { class: 'ch-vaga fim' }, el('div', { class: 'ch-rotulo', text: 'Chamada de ' + d.curso }),
+      el('p', { class: 'ch-grande', text: 'Não há mais nomes para chamar.' }),
+      el('p', { text: (r.ofertadas === 1 ? 'Sobra 1 vaga' : 'Sobram ' + r.ofertadas + ' vagas') + '. A próxima seria: ' + titulo.toLowerCase() + '.' }), caminho));
+  }
+  const v = d.porInsc[vaga.proximo];
+  const remanejada = vaga.origem !== vaga.lista;
+  const travado = chamadaOcupada();
+  // depois de um clique no cartão, o seguinte só vale passado um instante: um clique duplo não pode cair no próximo nome
+  const agir = function (fazer) { return function () { if (Date.now() < cham.trancadoAte || chamadaOcupada()) return; cham.trancadoAte = Date.now() + 450; fazer(); }; };
+  return el('section', { class: 'ch-bloco' },
+    el('div', { class: 'ch-vaga' }, el('div', { class: 'ch-rotulo', text: 'Vaga em chamada' + (q.ofertadas > 1 ? ' (' + q.ofertadas + ' desta origem em oferta)' : '') }),
+      el('p', { class: 'ch-grande', id: 'ch-vaga-titulo', text: titulo }),
+      el('p', { id: 'ch-vaga-lista' }, 'Chamando pela ', el('b', { text: Regra.nomeDaLista(vaga.lista) }), '.',
+        remanejada ? [' Quem ocupar fica com ', el('b', { text: Regra.textoDaVaga(vaga.cota, vaga.origem) }), ' e entrega os documentos de ' + Regra.nomeDaVaga(vaga.cota) + '.'] : null),
+      caminho),
+    el('div', { class: 'ch-cartao', 'data-insc': v.insc },
+      el('div', { class: 'ch-pos' }, vaga.pos + 'º', el('small', { text: vaga.lista === Regra.GERAL ? 'na lista geral' : 'na lista de ' + vaga.lista })),
+      el('div', {}, el('div', { class: 'ch-nome', id: 'ch-proximo', text: v.nome }),
+        el('div', { class: 'ch-meta', text: 'Inscrição ' + v.insc + (v.outras ? ' · ' + v.outras : '') + (v.ch && v.ch.e === 'R' ? ' · reintegrado às ' + soHora(v.ch.em) : '') + (v.pr ? ' · presença registrada às ' + soHora(v.pr.em) : '') })),
+      el('div', { class: 'acoes' },
+        el('button', { class: 'botao principal', type: 'button', id: 'ch-presente', 'data-foco': 'ch-presente', disabled: travado, text: 'Presente',
+          onclick: agir(function () { pedirChamada({ op: 'presente', insc: v.insc, lista: vaga.lista, cota: vaga.cota, origem: vaga.origem, caminho: Regra.caminhoEmTexto(vaga), otimista: true }); }) }),
+        el('button', { class: 'botao', type: 'button', id: 'ch-ausente', 'data-foco': 'ch-ausente', disabled: travado, text: 'Ausente',
+          onclick: agir(function () {
+            const op = { op: 'ausente', insc: v.insc, lista: vaga.lista, otimista: true };
+            if (vaga.caminho.length > 1) { op.origem = vaga.origem; op.caminho = Regra.caminhoEmTexto(vaga); }      // vaga remanejada: o Registro guarda as cotas puladas
+            pedirChamada(op);
+          }) }),
+        el('button', { class: 'botao', type: 'button', id: 'ch-trocar', 'data-foco': 'ch-trocar', disabled: travado, 'aria-expanded': cham.troca && cham.troca.insc === v.insc ? 'true' : 'false', text: 'Trocar vaga…',
+          onclick: agir(function () { cham.troca = cham.troca && cham.troca.insc === v.insc ? null : { insc: v.insc, destino: '', obs: '' }; desenhar(); }) }))));
+}
+
+/** Painel da troca manual: para o próximo nome (presente em outra vaga) ou para quem já foi confirmado (muda a vaga). */
+function elTroca(d) {
+  const t = cham.troca;
+  if (!t) return null;
+  const v = d.porInsc[t.insc], r = d.r, vaga = r.vaga;
+  const confirmado = daChamada(v) && Logica.tipoSituacao(v.situacao) !== 'fixa';
+  if (!v || (!confirmado && !(vaga && vaga.proximo === t.insc))) { cham.troca = null; return null; }
+  const cotaAtual = confirmado ? v.cota : vaga.cota, origemAtual = confirmado ? v.ch.o : vaga.origem;
+  const saldoDe = function (c) { return r.quadro[c].livres + (confirmado && origemAtual === c ? 1 : 0); };
+  const destinos = Regra.LISTAS.filter(function (c) { return c !== cotaAtual; });
+  if (t.destino && destinos.indexOf(t.destino) < 0) t.destino = '';
+  const comSaldo = t.destino ? saldoDe(t.destino) > 0 : false;
+  const obs = el('input', { type: 'text', maxlength: '200', placeholder: 'Observação (opcional)', 'aria-label': 'Observação da troca', 'data-foco': 'ch-obs', value: t.obs });
+  obs.addEventListener('input', function () { t.obs = obs.value; });
+  const confirmar = function () {
+    if (!t.destino || chamadaOcupada()) return;
+    cham.troca = null;
+    if (confirmado) pedirChamada({ op: 'trocar', insc: v.insc, cota: t.destino, mais1: !comSaldo, obs: t.obs });
+    else pedirChamada({ op: 'presente', insc: v.insc, lista: vaga.lista, cota: t.destino, origem: comSaldo ? t.destino : Regra.MAIS1, manual: true,
+      regra: { cota: vaga.cota, origem: vaga.origem }, caminho: Regra.caminhoEmTexto(vaga), obs: t.obs, otimista: true });
+  };
+  return el('section', { class: 'ch-bloco ch-troca', id: 'ch-painel-troca' },
+    el('h3', {}, 'Troca manual da vaga', el('small', { text: 'fica no Registro, com seu nome e a hora' })),
+    el('div', { class: 'ch-troca-corpo' },
+      el('p', {}, el('b', { text: v.nome }), confirmado ? ' está com ' : ': a regra indica ', el('b', { text: Regra.textoDaVaga(cotaAtual, origemAtual) }), '. Ocupar como:'),
+      el('div', { class: 'ch-destinos', role: 'group', 'aria-label': 'Vaga de destino' }, destinos.map(function (c) {
+        const saldo = saldoDe(c);
+        return el('button', { class: 'botao', type: 'button', 'aria-pressed': t.destino === c ? 'true' : 'false', 'data-destino': c, 'data-foco': 'ch-destino:' + c,
+          onclick: function () { t.destino = c; desenhar(); } }, c === Regra.GERAL ? 'Ampla' : c, el('small', { text: saldo > 0 ? 'saldo ' + saldo : 'sem saldo: +1' }));
+      })),
+      t.destino ? el('p', { id: 'ch-troca-resumo' }, 'Fica com ', el('b', { text: Regra.textoDaVaga(t.destino, comSaldo ? t.destino : Regra.MAIS1) }), ' e entrega os documentos de ' + Regra.nomeDaVaga(t.destino) + '.',
+        comSaldo ? null : ' O +1 não aumenta o total do curso: a última vaga da ordem fica sem oferta.') : null,
+      el('div', { class: 'ch-troca-fim' }, obs,
+        el('button', { class: 'botao principal', type: 'button', id: 'ch-troca-ok', 'data-foco': 'ch-troca-ok', disabled: !t.destino || chamadaOcupada(), text: confirmado ? 'Trocar a vaga' : 'Presente nesta vaga', onclick: confirmar }),
+        el('button', { class: 'botao', type: 'button', id: 'ch-troca-cancelar', text: 'Cancelar', onclick: function () { cham.troca = null; desenhar(); } }))));
+}
+
+/** Por que a pessoa está em cinza (não pode ser chamada agora), com a hora. Vazio para quem pode. */
+function motivoNaChamada(v, como) {
+  const ch = v.ch || {};
+  if (como === 'vaga') return 'já ocupa ' + Regra.textoDaVaga(v.cota, ch.o) + (ch.em ? ' · ' + soHora(ch.em) : '');
+  if (como === 'ausente') return 'ausente na ' + Regra.nomeDaLista(ch.l || Regra.GERAL) + (ch.em ? ' · ' + soHora(ch.em) : '');
+  if (como === 'indeferido') return (v.situacao || 'Indeferida').toLowerCase() + (v.motivo ? ' (' + v.motivo + ')' : '') + (daChamada(v) ? ' · vaga liberada' : '');
+  if (como === 'sem_presenca') return 'sem presença registrada';
+  return [ch.e === 'R' ? 'reintegrado às ' + soHora(ch.em) : '', v.pr ? 'presença às ' + soHora(v.pr.em) : ''].filter(function (x) { return x; }).join(' · ');
+}
+function botaoReintegrar(v) {
+  return el('button', { class: 'botao pequeno', type: 'button', 'data-reintegrar': v.insc, 'data-foco': 'ch-reintegrar:' + v.insc, disabled: chamadaOcupada(), text: 'Reintegrar',
+    title: 'Chegou depois: volta às listas e pode ser chamado para as vagas que ainda faltam',
+    onclick: function () { if (!chamadaOcupada()) pedirChamada({ op: 'reintegrar', insc: v.insc, otimista: true }); } });
+}
+
+/** A lista que está na vez, inteira e na ordem: o próximo em destaque; em cinza, quem não pode ser chamado, com o motivo. */
+function elListaNaVez(d) {
+  const vaga = d.r.vaga;
+  const lista = vaga && vaga.lista ? vaga.lista : Regra.GERAL;
+  const itens = d.r.listas[lista] || [];
+  const cinzas = itens.filter(function (x) { return x.como !== 'livre'; }).length;
+  return el('section', { class: 'ch-bloco' },
+    el('h3', {}, (lista === Regra.GERAL ? 'Lista geral' : 'Lista de ' + lista) + (vaga && vaga.proximo ? ': na vez' : ''),
+      el('small', { text: itens.length + (itens.length === 1 ? ' nome' : ' nomes') + (cinzas ? ', ' + cinzas + ' em cinza' : '') })),
+    itens.length ? el('ol', { class: 'ch-nomes', id: 'ch-lista' }, itens.map(function (x) {
+      const v = d.porInsc[x.insc], motivo = motivoNaChamada(v, x.como);
+      const ehProximo = !!vaga && vaga.proximo === x.insc;
+      return el('li', { class: ehProximo ? 'proximo' : (x.como === 'livre' ? null : 'cinza'), 'data-insc': x.insc, 'data-como': x.como },
+        el('span', { class: 'ch-p', text: x.pos + 'º' }),
+        el('span', {}, el('span', { class: 'ch-n', text: v.nome }), motivo ? el('span', { class: 'ch-m', text: motivo }) : null),
+        x.como === 'ausente' ? botaoReintegrar(v) : botaoPresenca(v, x.como));
+    })) : el('p', { class: 'ch-vazio', text: 'Ninguém nesta lista.' }));
+}
+
+/** Quadro de vagas do curso: por cota de origem, na ordem em que são chamadas, e o teto do curso. */
+function elQuadro(d) {
+  const r = d.r, vaga = r.vaga;
+  const origens = Regra.ORIGENS.filter(function (o) { return o !== Regra.SEM || r.quadro[o].ociosas || r.quadro[o].usadas; });
+  const rotulo = function (o) { return o === Regra.GERAL ? 'Ampla' : (o === Regra.SEM ? 'Sem aprov.' : o); };
+  const linha = function (nome, valor, classe) {
+    let total = 0;
+    const celulas = origens.map(function (o) {
+      const n = valor(r.quadro[o], o);
+      total += n;
+      return el('td', { class: (n ? '' : 'zero') + (vaga && vaga.origem === o && classe === 'saldo' ? ' vez' : ''), 'data-origem': o, text: String(n) });
+    });
+    return el('tr', { class: classe }, el('th', { scope: 'row', text: nome }), celulas, el('td', { class: total ? '' : 'zero', text: String(total) }));
+  };
+  const chamados = r.comVaga, aprovados = d.entrada.seguram;
+  return el('section', { class: 'ch-bloco' },
+    el('h3', {}, 'Vagas de ' + d.curso, el('small', { text: 'por cota de origem, na ordem da chamada' })),
+    el('table', { class: 'ch-quadro', id: 'ch-quadro' },
+      el('thead', {}, el('tr', {}, el('th', {}), origens.map(function (o) {
+        const partes = rotulo(o).split('_');
+        return el('th', { scope: 'col' }, partes.length === 2 ? [partes[0] + '_', el('wbr', {}), partes[1]] : rotulo(o));
+      }), el('th', { scope: 'col', text: 'Total' }))),
+      el('tbody', {},
+        linha('Ociosas', function (q) { return q.ociosas; }, 'ociosas'),
+        linha('Ocupadas na chamada', function (q) { return q.usadas; }, 'usadas'),
+        linha('Saldo', function (q) { return q.livres; }, 'saldo'),
+        r.mais1 ? linha('+1 por troca manual', function (q) { return q.mais1; }, 'mais1') : null,
+        r.semOferta ? linha('Sem oferta (total do curso atingido)', function (q) { return q.semOferta; }, 'sem-oferta') : null)),
+    el('p', { class: 'ch-total', id: 'ch-total' }, 'Total do curso: ', el('b', { text: d.entrada.vagas + ' vagas' }), ' · ' + aprovados + (aprovados === 1 ? ' ocupada por aprovado' : ' ocupadas por aprovados') +
+      ' · ' + chamados + ' na chamada · ', el('b', { text: r.capacidade === 1 ? 'falta 1' : 'faltam ' + r.capacidade })),
+    elRegularizar(d));
+}
+
+/** Quem já teve o nome chamado, do mais recente para o mais antigo, com o que dá para fazer com cada um. */
+function elChamados(d) {
+  const gente = Object.keys(d.porInsc).map(function (i) { return d.porInsc[i]; }).filter(function (v) { return v.ch && v.ch.e; })
+    .sort(function (a, b) { return (b.ch.t - a.ch.t) || a.nome.localeCompare(b.nome, 'pt-BR'); });
+  const presentes = gente.filter(function (v) { return v.ch.e === 'P'; }).length, ausentes = gente.filter(function (v) { return v.ch.e === 'A'; }).length;
+  const ocupada = chamadaOcupada();
+  const desfazer = function (v, pergunta) {
+    return el('button', { class: 'botao pequeno', type: 'button', 'data-desfazer': v.insc, 'data-foco': 'ch-desfazer:' + v.insc, disabled: ocupada, text: 'Desfazer',
+      onclick: function () { if (!chamadaOcupada() && window.confirm(pergunta)) pedirChamada({ op: 'desfazer', insc: v.insc }); } });
+  };
+  const ROTULO = { presente: 'presente', ausente: 'ausente', reintegrar: 'reintegração', trocar: 'troca de vaga' };
+  const ultima = cham.desfeitas.length ? cham.desfeitas[cham.desfeitas.length - 1] : null;
+  const daUltima = ultima && d.porInsc[ultima.insc] ? d.porInsc[ultima.insc] : (ultima ? visao(ultima.insc) : null);
+  return el('section', { class: 'ch-bloco' },
+    el('h3', {}, el('span', {}, 'Já chamados ', el('small', { text: gente.length ? presentes + (presentes === 1 ? ' presente, ' : ' presentes, ') + ausentes + (ausentes === 1 ? ' ausente' : ' ausentes') : '' })),
+      el('button', { class: 'botao pequeno', type: 'button', id: 'ch-desfazer', 'data-foco': 'ch-desfazer-ultima', disabled: !ultima || ocupada,
+        text: ultima && daUltima ? 'Desfazer: ' + ROTULO[ultima.op] + ' de ' + daUltima.nome.split(' ')[0] : 'Desfazer última ação',
+        title: 'Desfaz a última coisa que você fez nesta tela, desde que ela foi aberta',
+        onclick: function () { if (ultima && !chamadaOcupada()) pedirChamada({ op: 'desfazer', insc: ultima.insc }); } })),
+    gente.length ? el('ul', { class: 'ch-chamados', id: 'ch-chamados' }, gente.map(function (v) {
+      const ch = v.ch, fixa = Logica.tipoSituacao(v.situacao) === 'fixa', trocada = !!ch.tr;
+      const pilha = String(ch.tr || '').split(' | '), desfazTroca = pilha[pilha.length - 1].indexOf('antes: ') === 0;
+      let texto, acoes;
+      if (ch.e === 'P' && !fixa) {
+        texto = 'Presente: ' + Regra.textoDaVaga(v.cota, ch.o) + ', pela ' + Regra.nomeDaLista(ch.l || Regra.GERAL);
+        acoes = [el('button', { class: 'botao pequeno', type: 'button', 'data-ficha': v.insc, 'data-foco': 'ch-ficha:' + v.insc, text: 'Ficha', onclick: function () { fichaPelaChamada(v.insc); } }),
+          el('button', { class: 'botao pequeno', type: 'button', 'data-trocar': v.insc, 'data-foco': 'ch-trocar:' + v.insc, disabled: ocupada, text: 'Trocar vaga…',
+            onclick: function () { cham.troca = { insc: v.insc, destino: '', obs: '' }; desenhar(); $('chamada').scrollTop = 0; } }),
+          desfazer(v, desfazTroca ? 'Desfazer a troca de vaga de ' + v.nome + '? Volta à vaga de antes.' : 'Desfazer o presente de ' + v.nome + '? A vaga volta a ficar livre e o nome volta à lista.')];
+      } else if (ch.e === 'P') {
+        texto = 'Presente; depois, ' + motivoNaChamada(v, 'indeferido');
+        acoes = [el('button', { class: 'botao pequeno', type: 'button', 'data-ficha': v.insc, 'data-foco': 'ch-ficha:' + v.insc, text: 'Ficha', onclick: function () { fichaPelaChamada(v.insc); } })];
+      } else if (ch.e === 'A') {
+        texto = 'Ausente na ' + Regra.nomeDaLista(ch.l || Regra.GERAL);
+        acoes = [botaoReintegrar(v)];
+      } else {
+        texto = 'Reintegrado (tinha ficado ausente na ' + Regra.nomeDaLista(ch.l || Regra.GERAL) + ')';
+        acoes = [desfazer(v, 'Desfazer a reintegração de ' + v.nome + '? Volta a ausente.')];
+      }
+      return el('li', { 'data-insc': v.insc, 'data-estado': ch.e + (ch.e === 'P' && fixa ? 'x' : '') },
+        el('span', { class: 'ch-hora', text: soHora(ch.em) }),
+        el('span', {}, el('span', { class: 'ch-n', text: v.nome }), trocada ? el('span', { class: 'ch-marca', text: 'vaga trocada à mão' }) : null,
+          el('span', { class: 'ch-m', text: texto + (ch.por ? ' · por ' + ch.por : '') + (chamadaPendente(v.insc) ? ' · gravando…' : '') })),
+        el('span', { class: 'acoes' }, acoes));
+    })) : el('p', { class: 'ch-vazio', text: 'Ninguém chamado ainda neste curso.' }));
+}
+
+$('botao-chamada').addEventListener('click', function () { abrirChamada(); });
+
+/* ====================================================================== */
+/* 10. Para publicar: quadro de vagas ociosas e listas dos classificáveis  */
+/*     (um modo do painel de impressão; as tabelas levam o estilo na       */
+/*     própria célula, para colar bem num documento)                       */
+/* ====================================================================== */
+const pub = { vazias: true };
+const CELULA = 'border:1px solid #000;padding:3px 6px;';
+function notaEmTexto(n, casas) {
+  if (n === undefined || n === null || n === '') return '';
+  return typeof n === 'number' ? n.toFixed(casas).replace('.', ',') : String(n);
+}
+/** Casas decimais para mostrar as notas todas do mesmo jeito (no máximo 3). */
+function casasDasNotas(pessoas) {
+  let casas = 0;
+  pessoas.forEach(function (v) {
+    if (typeof v.nt !== 'number') return;
+    const t = String(Math.round(v.nt * 1000) / 1000), p = t.indexOf('.');
+    if (p >= 0) casas = Math.max(casas, t.length - p - 1);
+  });
+  return casas;
+}
+function tituloDaLista(l) { return l === Regra.GERAL ? 'Listagem geral: ampla concorrência (AC)' : 'Reserva de vagas ' + l; }
+function rotuloDaOrigem(o) { return o === Regra.GERAL ? 'Ampla' : (o === Regra.SEM ? 'Sem aprovado no resultado' : o); }
+
+/** Por curso: o que a chamada vai oferecer em cada cota de origem e quem ainda pode ser chamado em cada lista. */
+function dadosParaPublicar(cfg) {
+  const todos = Object.keys(estado.candidatos).map(visao);
+  return cfg.cursos.map(function (c) {
+    const d = dadosDaChamada(cfg, c.nome, todos);
+    const listas = Regra.LISTAS.map(function (l) {
+      return { lista: l, itens: d.r.listas[l].filter(function (x) { return x.como === 'livre' || x.como === 'sem_presenca'; })
+        .map(function (x) { return { v: d.porInsc[x.insc], pos: x.pos }; }) };
+    });
+    const gente = {};
+    listas.forEach(function (l) { l.itens.forEach(function (x) { gente[x.v.insc] = x.v; }); });
+    const pessoas = Object.keys(gente).map(function (i) { return gente[i]; });
+    return { curso: c.nome, r: d.r, listas: listas, pessoas: pessoas, aguardando: d.bal ? d.bal.soma(d.bal.aguardando) : 0,
+      semNota: pessoas.filter(function (v) { return v.nt === undefined || v.nt === ''; }).length };
+  });
+}
+
+function avisosParaPublicar(dados) {
+  const avisos = [];
+  const aguardando = dados.filter(function (d) { return d.aguardando; });
+  if (aguardando.length) avisos.push('Ainda há aprovados em "Aguardando" (' + aguardando.map(function (d) { return d.curso + ' ' + d.aguardando; }).join(', ') +
+    '). Eles contam como vaga ociosa. Antes de publicar, use na planilha o menu Pré-matrícula > Encerrar a pré-matrícula dos aprovados.');
+  const semNota = dados.reduce(function (s, d) { return s + d.semNota; }, 0);
+  if (semNota) avisos.push(!estado.config.pontuacao ? 'As listas estão sem pontuação: a planilha ainda não tem a coluna "Pontuação" (menu Pré-matrícula > 1. Montar ou conferir a base).' :
+    semNota + (semNota === 1 ? ' classificável está' : ' classificáveis estão') + ' sem pontuação. Na planilha, cole o arquivo do resultado na aba Importar e use o menu Pré-matrícula > Importar só a pontuação.');
+  if (temPendencia()) avisos.push('Há marcações ainda não salvas. Espere a tela dizer "Tudo salvo".');
+  return avisos;
+}
+
+function folhaParaPublicar(cfg) {
+  const dados = dadosParaPublicar(cfg);
+  const origens = Regra.ORIGENS.filter(function (o) { return o !== Regra.SEM || dados.some(function (d) { return d.r.quadro[o].ofertadas; }); });
+  const th = function (texto, extra) { return el('th', { style: CELULA + 'background:#e6e6e6;font-weight:bold;text-align:center;' + (extra || ''), text: texto }); };
+  const td = function (texto, extra) { return el('td', { style: CELULA + (extra || ''), text: String(texto) }); };
+  const quadro = el('table', { id: 'pub-quadro', class: 'pub', style: 'border-collapse:collapse;' },
+    el('thead', {}, el('tr', {}, th('Curso', 'text-align:left;'), origens.map(function (o) { return th(rotuloDaOrigem(o)); }), th('Total'))),
+    el('tbody', {}, dados.map(function (d) {
+      return el('tr', { 'data-curso': d.curso }, td(d.curso), origens.map(function (o) { return td(d.r.quadro[o].ofertadas, 'text-align:center;'); }), td(d.r.ofertadas, 'text-align:center;font-weight:bold;'));
+    })));
+  const listas = el('div', { id: 'pub-listas' }, dados.map(function (d) {
+    if (!d.pessoas.length) return el('div', { class: 'pub-curso', 'data-curso': d.curso }, el('h3', { text: d.curso }), el('p', { text: 'Não há classificáveis neste curso.' }));
+    const casas = casasDasNotas(d.pessoas);
+    return el('div', { class: 'pub-curso', 'data-curso': d.curso }, el('h3', { text: d.curso }), d.listas.map(function (l) {
+      if (!l.itens.length) return pub.vazias ? [el('h4', { text: tituloDaLista(l.lista) }), el('p', { text: 'Não há candidatos nesta modalidade.' })] : null;
+      return [el('h4', { text: tituloDaLista(l.lista) }),
+        el('table', { class: 'pub', 'data-lista': l.lista, style: 'border-collapse:collapse;' },
+          el('thead', {}, el('tr', {}, th('Inscrição'), th('Nome', 'text-align:left;'), th('Pontuação'), th('Classificação'), th('Situação'))),
+          el('tbody', {}, l.itens.map(function (x) {
+            return el('tr', {}, td(x.v.insc, 'text-align:center;'), td(x.v.nome), td(notaEmTexto(x.v.nt, casas), 'text-align:center;'), td(x.pos + 'º', 'text-align:center;'), td('Classificável', 'text-align:center;'));
+          })))];
+    }));
+  }));
+  return [
+    el('div', { class: 'lp-cab' }, el('strong', { text: 'Chamada dos classificáveis: vagas e listas' }), el('span', { text: doProcesso(cfg) + ' · retrato de ' + hoje() })),
+    el('h3', { class: 'pub-titulo', text: 'Vagas ociosas por curso e modalidade' }), quadro,
+    el('p', { class: 'pub-nota', text: 'Vagas na modalidade em que ficaram ociosas, na ordem em que serão oferecidas na chamada. Retrato de ' + hoje() + '.' }),
+    listas
+  ];
+}
+
+/** Copia um pedaço da folha (com as tabelas) para a área de transferência, para colar no documento. */
+function copiarDaFolha(id, oQue) {
+  const no = $(id);
+  if (!no) return;
+  const selecao = window.getSelection(), faixa = document.createRange();
+  faixa.selectNode(no);
+  selecao.removeAllRanges();
+  selecao.addRange(faixa);
+  let certo = false;
+  try { certo = document.execCommand('copy'); } catch (e) { certo = false; }
+  if (certo) selecao.removeAllRanges();
+  avisar(certo ? oQue + ': copiado. Cole no seu documento.' : 'Não consegui copiar sozinho. O trecho ficou selecionado: copie com Ctrl+C.');
+}
+
+function opcoesParaPublicar(cfg) {
+  const chave = el('input', { type: 'checkbox', id: 'pub-vazias', checked: pub.vazias });
+  chave.addEventListener('change', function () { pub.vazias = chave.checked; montarFolhas(); });
+  impPecas.botao.textContent = 'Imprimir ou salvar em PDF';
+  return [el('p', { text: 'O quadro de vagas e as listas dos classificáveis, para o documento que será publicado. Os números são os deste momento: confira "Tudo salvo" e use "Atualizar agora" antes de copiar.' }),
+    (impPecas.avisosPub = el('div', { class: 'pub-avisos' })),
+    el('div', { class: 'imp-linha' }, el('label', { class: 'imp-chave' }, chave, 'Mostrar as modalidades sem candidatos')),
+    el('div', { class: 'imp-linha' },
+      el('button', { class: 'botao', type: 'button', id: 'pub-copiar-quadro', text: 'Copiar o quadro', onclick: function () { copiarDaFolha('pub-quadro', 'Quadro de vagas'); } }),
+      el('button', { class: 'botao', type: 'button', id: 'pub-copiar-listas', text: 'Copiar as listas', onclick: function () { copiarDaFolha('pub-listas', 'Listas'); } }),
+      impPecas.botao)];
+}
+
+/* ====================================================================== */
+/* 11. O dia da chamada: busca, presença, a chave "só quem teve a presença */
+/*     registrada", regularização do +1 e o histórico (planilha versão 11) */
+/* ====================================================================== */
+const TEXTO_SO_PRESENTES = 'A partir de agora serão chamados apenas os candidatos com presença registrada. Quem está presente e ainda não se apresentou à equipe, apresente-se agora.';
+const hist = { aba: 'chamada', linhas: null, carregando: false, erro: '', recentes: true, imprimindo: false, em: '' };
+
+function temDia() { const cfg = estado.config; return !!(cfg && cfg.dia); }
+function soPresentesEm(cfg, curso) { return (cfg.soPresentes || []).indexOf(curso) >= 0; }
+function pedirDia(op) { op.acao = 'dia'; pedirChamada(op); }
+
+/** Presença e a forma de chamar: quantos já têm presença, e a chave do curso (com o texto para ler em voz alta ao ligar). */
+function elForma(d) {
+  if (!temDia()) return null;
+  const cfg = estado.config, ligada = soPresentesEm(cfg, d.curso);
+  const aChamar = d.entrada.pessoas.filter(function (p) { return (p.e === '' || p.e === 'R') && !p.fixa; });
+  const com = aChamar.filter(function (p) { return p.presenca; }).length, sem = aChamar.length - com;
+  const ocupada = chamadaOcupada();
+  const botao = el('button', { class: 'botao pequeno', type: 'button', id: 'ch-chave', 'aria-pressed': ligada ? 'true' : 'false', 'data-foco': 'ch-chave', disabled: ocupada,
+    text: ligada ? 'Chamando só quem teve a presença registrada' : 'Chamar só quem teve a presença registrada…',
+    title: ligada ? 'Clique para voltar a chamar todos os nomes' : 'A fila passa a pular quem não tem presença registrada',
+    onclick: function () {
+      if (chamadaOcupada()) return;
+      if (!ligada) { cham.chave = !cham.chave; desenhar(); return; }
+      if (window.confirm('Voltar a chamar todos os nomes em ' + d.curso + '? Fica no Registro.')) pedirDia({ op: 'chave', curso: d.curso, valor: false, sem: sem });
+    } });
+  const painel = cham.chave && !ligada ? el('div', { class: 'ch-chave-painel', id: 'ch-chave-painel' },
+    el('p', {}, 'Ao ligar, a fila de ', el('b', { text: d.curso }), ' pula quem não tem presença registrada (' + sem + (sem === 1 ? ' nome agora' : ' nomes agora') +
+      '). Eles continuam "não chamados" e entram na fila se a presença for registrada depois. Fica no Registro, com seu nome e a hora.'),
+    el('p', { class: 'ch-ler' }, el('small', { text: 'Para ler em voz alta:' }), el('span', { text: TEXTO_SO_PRESENTES })),
+    el('div', { class: 'acoes' },
+      el('button', { class: 'botao principal pequeno', type: 'button', id: 'ch-chave-ok', disabled: ocupada, text: 'Ligar', onclick: function () {
+        if (chamadaOcupada()) return;
+        cham.chave = false;
+        pedirDia({ op: 'chave', curso: d.curso, valor: true, sem: sem });
+      } }),
+      el('button', { class: 'botao pequeno', type: 'button', text: 'Cancelar', onclick: function () { cham.chave = false; desenhar(); } }))) : null;
+  return [el('span', { class: 'ch-presencas', id: 'ch-presencas', text: 'Presença registrada: ' + com + ' de ' + aChamar.length + ' ainda não chamados' }), botao, painel,
+    ligada && sem ? el('span', { class: 'ch-pulando', text: sem + (sem === 1 ? ' nome sem presença está sendo pulado' : ' nomes sem presença estão sendo pulados') +
+      (com ? '' : '. Para registrar quem chegou: botão "Presença" ao lado do nome, na lista, ou a busca') }) : null];
+}
+
+/** Resultado da busca: o classificável e o que dá para fazer com ele (presença, reintegrar, ficha, trocar a vaga). */
+function elAchados(d, todos) {
+  const termo = Logica.semAcento(cham.busca).trim();
+  if (!termo) return null;
+  const cfg = estado.config, P = cham.pecas;
+  const gente = todos.filter(function (v) {
+    return v.lista === cfg.classificavel && (Logica.semAcento(v.nome).indexOf(termo) >= 0 || String(v.insc).indexOf(termo) === 0);
+  }).sort(function (a, b) { return ((a.curso === d.curso ? 0 : 1) - (b.curso === d.curso ? 0 : 1)) || a.nome.localeCompare(b.nome, 'pt-BR'); });
+  const limpar = function () { cham.busca = ''; P.busca.value = ''; P.busca.focus(); };
+  const ocupada = chamadaOcupada();
+  const itens = gente.slice(0, 8).map(function (v) {
+    const ch = v.ch || {}, fixa = Logica.tipoSituacao(v.situacao) === 'fixa', doCurso = v.curso === d.curso;
+    let situacao;
+    if (ch.e === 'P') situacao = fixa ? 'presente; depois, ' + (v.situacao || '').toLowerCase() : 'presente: ' + Regra.textoDaVaga(v.cota, ch.o);
+    else if (ch.e === 'A') situacao = 'ausente na ' + Regra.nomeDaLista(ch.l || Regra.GERAL) + ' às ' + soHora(ch.em);
+    else if (ch.e === 'R') situacao = 'reintegrado às ' + soHora(ch.em);
+    else situacao = fixa ? (v.situacao || '').toLowerCase() : 'não chamado';
+    const acoes = [];
+    if (temDia() && ch.e !== 'P' && !fixa) {
+      if (!v.pr) acoes.push(el('button', { class: 'botao principal pequeno', type: 'button', 'data-presenca': v.insc, 'data-foco': 'ch-presenca:' + v.insc, text: 'Registrar presença',
+        onclick: function () { pedirDia({ op: 'presenca', insc: v.insc, valor: true, otimista: true }); limpar(); desenhar(); } }));
+      else acoes.push(el('button', { class: 'botao pequeno', type: 'button', 'data-sem-presenca': v.insc, text: 'Apagar presença',
+        onclick: function () { if (window.confirm('Apagar a presença de ' + v.nome + '?')) { pedirDia({ op: 'presenca', insc: v.insc, valor: false, otimista: true }); desenhar(); } } }));
+    }
+    if (ch.e === 'A') acoes.push(el('button', { class: 'botao pequeno', type: 'button', 'data-reintegrar-busca': v.insc, disabled: ocupada, text: 'Reintegrar',
+      title: 'Chegou depois: volta às listas e pode ser chamado para as vagas que ainda faltam',
+      onclick: function () { if (chamadaOcupada()) return; pedirChamada({ op: 'reintegrar', insc: v.insc, otimista: true }); limpar(); desenhar(); } }));
+    if (ch.e === 'P') {
+      acoes.push(el('button', { class: 'botao pequeno', type: 'button', 'data-ficha-busca': v.insc, text: 'Ficha', onclick: function () { fichaPelaChamada(v.insc); } }));
+      if (doCurso && !fixa) acoes.push(el('button', { class: 'botao pequeno', type: 'button', disabled: ocupada, text: 'Trocar vaga…',
+        onclick: function () { cham.troca = { insc: v.insc, destino: '', obs: '' }; limpar(); desenhar(); } }));
+    }
+    if (!doCurso) acoes.push(el('button', { class: 'botao pequeno', type: 'button', text: 'Ir para ' + v.curso, onclick: function () { cham.curso = v.curso; cham.troca = null; cham.proximo = ''; desenhar(); } }));
+    return el('li', { 'data-insc': v.insc },
+      el('span', {}, el('span', { class: 'ch-n', text: v.nome }),
+        el('span', { class: 'ch-m', text: ['inscrição ' + v.insc, doCurso ? '' : v.curso, v.outras, situacao, v.pr ? 'presença às ' + soHora(v.pr.em) + (v.pr.por ? ' (por ' + v.pr.por + ')' : '') : ''].filter(function (x) { return x; }).join(' · ') })),
+      el('span', { class: 'acoes' }, acoes));
+  });
+  return el('section', { class: 'ch-bloco ch-achados', id: 'ch-achados' },
+    el('h3', {}, 'Busca', el('small', { text: gente.length ? gente.length + (gente.length === 1 ? ' pessoa' : ' pessoas') + (gente.length > 8 ? ' (mostrando 8: digite mais)' : '') : '' })),
+    gente.length ? el('ul', { class: 'ch-chamados' }, itens) : el('p', { class: 'ch-vazio', text: 'Nenhum classificável com esse nome ou inscrição.' }));
+}
+
+/** Sobrou vaga livre numa cota que tem alguém a mais (+1): oferece pôr a pessoa na vaga normal. */
+function elRegularizar(d) {
+  const r = d.r;
+  if (!r.mais1) return null;
+  const ocupada = chamadaOcupada();
+  const linhas = Regra.LISTAS.filter(function (c) { return r.quadro[c].mais1 > 0 && r.quadro[c].livres > 0; }).map(function (c) {
+    const v = Object.keys(d.porInsc).map(function (i) { return d.porInsc[i]; })
+      .filter(function (x) { return daChamada(x) && x.ch.o === Regra.MAIS1 && x.cota === c && Logica.tipoSituacao(x.situacao) !== 'fixa'; })
+      .sort(function (a, b) { return a.ch.t - b.ch.t; })[0];
+    if (!v) return null;
+    return el('p', { class: 'ch-regularizar' }, 'Há vaga livre de ' + Regra.nomeDaVaga(c) + ' e ', el('b', { text: v.nome }), ' está nessa cota com +1. ',
+      el('button', { class: 'botao pequeno', type: 'button', 'data-regularizar': c, 'data-foco': 'ch-regularizar:' + c, disabled: ocupada, text: 'Regularizar',
+        title: 'A pessoa passa a ocupar a vaga livre e o +1 deixa de existir. Fica no Registro.',
+        onclick: function () {
+          if (chamadaOcupada()) return;
+          if (window.confirm('Regularizar o +1 de ' + v.nome + '? A pessoa passa a ocupar a vaga livre de ' + Regra.nomeDaVaga(c) + '. Fica no Registro.')) pedirChamada({ op: 'trocar', insc: v.insc, cota: c, mais1: false, obs: '' });
+        } }));
+  }).filter(function (x) { return x; });
+  return linhas.length ? linhas : null;
+}
+
+/** Na lista da vez: registra que a pessoa chegou. Não ocupa vaga: a vaga vem com o "Presente", quando o nome é chamado. */
+function botaoPresenca(v, como) {
+  if (!temDia() || v.pr || (como !== 'livre' && como !== 'sem_presenca')) return el('span', {});
+  return el('button', { class: 'botao pequeno', type: 'button', 'data-presenca-lista': v.insc, 'data-foco': 'ch-presenca-lista:' + v.insc, text: 'Presença',
+    title: 'Registra que a pessoa chegou. Ainda não ocupa vaga: isso acontece com o "Presente", quando o nome for chamado.',
+    onclick: function () { pedirDia({ op: 'presenca', insc: v.insc, valor: true, otimista: true }); } });
+}
+
+/* ---------- aprovados que não compareceram no prazo e aparecem na chamada (ação excepcional) */
+function aprovadoAusente(v) { return v.lista === estado.config.aprovado && Logica.classeDaSituacao(v.situacao) === 'sit-ausente'; }
+function aprovadoDeVolta(v) { return v.lista === estado.config.aprovado && daChamada(v) && Logica.tipoSituacao(v.situacao) !== 'fixa'; }
+function temRetorno(v) { return temDia() && (aprovadoAusente(v) || aprovadoDeVolta(v)); }
+function elVoltaNaFicha(v) {
+  return el('p', { class: 'alerta vaga', id: 'ficha-vaga' }, 'Chamada dos classificáveis. ',
+    el('span', { text: 'Aprovado(a) que não compareceu no prazo dos aprovados; presente na chamada em ' + v.ch.em + ' (ação excepcional). Ocupa a própria vaga, de ' + Regra.nomeDaVaga(v.cota) + '.' }));
+}
+function elRetorno(d, todos) {
+  if (!temDia()) return null;
+  const cfg = estado.config, doCurso = todos.filter(function (v) { return v.curso === d.curso; });
+  const voltaram = doCurso.filter(aprovadoDeVolta).sort(function (a, b) { return b.ch.t - a.ch.t; });
+  const termo = Logica.semAcento(cham.busca).trim();
+  const ausentes = doCurso.filter(aprovadoAusente).sort(function (a, b) {
+    return (cfg.cotas.indexOf(a.cota) - cfg.cotas.indexOf(b.cota)) || ((Number(a.clas) || 9999) - (Number(b.clas) || 9999)) || a.nome.localeCompare(b.nome, 'pt-BR');
+  });
+  const vaga = d.r.vaga;
+  const esgotada = !(vaga && vaga.proximo), cabe = d.r.capacidade > 0;
+  if (!voltaram.length && !ausentes.length) return null;
+  const ocupada = chamadaOcupada();
+  const aberto = cham.retorno && esgotada && cabe;
+  const visiveis = ausentes.filter(function (v) { return !termo || Logica.semAcento(v.nome).indexOf(termo) >= 0 || String(v.insc).indexOf(termo) === 0; });
+  return el('section', { class: 'ch-bloco', id: 'ch-retorno' },
+    el('h3', {}, el('span', {}, 'Aprovados que não compareceram ', el('small', { text: 'ação excepcional · ' + voltaram.length + (voltaram.length === 1 ? ' presente na chamada' : ' presentes na chamada') })),
+      ausentes.length ? el('button', { class: 'botao pequeno', type: 'button', id: 'ch-retorno-abrir', 'data-foco': 'ch-retorno-abrir', disabled: !(esgotada && cabe), 'aria-expanded': aberto ? 'true' : 'false',
+        text: aberto ? 'Ocultar os nomes' : 'Chamar ou registrar (' + ausentes.length + ')',
+        title: !esgotada ? 'Só depois de esgotada a lista dos classificáveis deste curso' : (!cabe ? 'O curso não tem vaga livre' : 'Mostra os aprovados que não compareceram no prazo'),
+        onclick: function () { cham.retorno = !cham.retorno; desenhar(); } }) : null),
+    ausentes.length && !(esgotada && cabe) ? el('p', { class: 'ch-vazio', text: !esgotada ? 'Fica disponível quando não houver mais classificáveis para chamar neste curso.' : 'O curso não tem vaga livre.' }) : null,
+    voltaram.length || aberto ? el('ul', { class: 'ch-chamados', id: 'ch-retorno-lista' },
+      voltaram.map(function (v) {
+        return el('li', { 'data-insc': v.insc, 'data-estado': 'volta' }, el('span', { class: 'ch-hora', text: soHora(v.ch.em) }),
+          el('span', {}, el('span', { class: 'ch-n', text: v.nome }), el('span', { class: 'ch-m', text: 'Aprovado em ' + Regra.nomeDaVaga(v.cota) + '; presente na chamada' + (v.ch.por ? ' · por ' + v.ch.por : '') })),
+          el('span', { class: 'acoes' },
+            el('button', { class: 'botao pequeno', type: 'button', 'data-ficha': v.insc, text: 'Ficha', onclick: function () { fichaPelaChamada(v.insc); } }),
+            el('button', { class: 'botao pequeno', type: 'button', 'data-retorno-desfazer': v.insc, disabled: ocupada, text: 'Desfazer',
+              onclick: function () { if (!chamadaOcupada() && window.confirm('Desfazer a presença de ' + v.nome + ' na chamada? Volta a "' + cfg.nomes.ausente + '".')) pedirDia({ op: 'retorno', insc: v.insc, valor: false }); } })));
+      }),
+      aberto ? visiveis.map(function (v) {
+        return el('li', { 'data-insc': v.insc, 'data-estado': 'ausente' }, el('span', { class: 'ch-hora', text: v.clas ? v.clas + 'º' : '' }),
+          el('span', {}, el('span', { class: 'ch-n', text: v.nome }), el('span', { class: 'ch-m', text: 'Aprovado em ' + Regra.nomeDaVaga(v.cota) + ' · inscrição ' + v.insc + ' · ' + (v.situacao || '').toLowerCase() })),
+          el('span', { class: 'acoes' }, el('button', { class: 'botao principal pequeno', type: 'button', 'data-retorno': v.insc, 'data-foco': 'ch-retorno:' + v.insc, disabled: ocupada, text: 'Presente',
+            onclick: function () {
+              if (chamadaOcupada()) return;
+              if (window.confirm(v.nome + ' foi aprovado(a) e não compareceu no prazo. Registrar como presente na chamada dos classificáveis? É uma ação excepcional: volta a ocupar a vaga e entra na fila do balcão. Fica no Registro.')) pedirDia({ op: 'retorno', insc: v.insc, valor: true });
+            } })));
+      }) : null) : null);
+}
+
+/* ---------- histórico da chamada: as linhas do Registro dos classificáveis */
+function carregarHistorico() {
+  if (hist.carregando) return;
+  hist.carregando = true; hist.erro = '';
+  desenharChamada();
+  chamar({ acao: 'historico' }).then(function (r) {
+    hist.carregando = false;
+    if (r.ok) { hist.linhas = r.linhas || []; hist.em = hoje(); }
+    else hist.erro = r.mensagem || 'A planilha não entregou o histórico.';
+    desenharChamada();
+  });
+}
+function desenharAbas(d) {
+  const P = cham.pecas;
+  const abas = [['chamada', 'Chamada'], ['historico', 'Histórico']];
+  trocarFilhos(P.abas, Number(estado.config.versao) >= 11 ? abas.map(function (a) {
+    return el('button', { class: 'botao pequeno', type: 'button', 'aria-pressed': hist.aba === a[0] ? 'true' : 'false', 'data-aba': a[0], 'data-foco': 'ch-aba:' + a[0], text: a[1],
+      onclick: function () { hist.aba = a[0]; if (a[0] === 'historico') carregarHistorico(); desenhar(); } });
+  }) : null);
+  const mostra = hist.aba === 'historico';
+  P.corpo.hidden = mostra;
+  P.historico.hidden = !mostra;
+  if (!mostra) return;
+  const nomeDe = function (insc) { const c = estado.candidatos[insc]; return c ? c.nome : ''; };
+  const cursoDe = function (insc) { const c = estado.candidatos[insc]; return c ? c.curso : ''; };
+  let linhas = (hist.linhas || []).filter(function (l) { return l.insc ? cursoDe(l.insc) === d.curso : l.det.indexOf(' em ' + d.curso) >= 0; });
+  const total = linhas.length;
+  if (hist.recentes && !hist.imprimindo) linhas = linhas.slice().reverse();
+  const chave = el('input', { type: 'checkbox', id: 'ch-hist-recentes', checked: hist.recentes });
+  chave.addEventListener('change', function () { hist.recentes = chave.checked; desenharChamada(); });
+  trocarFilhos(P.historico,
+    el('div', { class: 'ch-hist-controles' },
+      el('button', { class: 'botao pequeno', type: 'button', id: 'ch-hist-atualizar', disabled: hist.carregando, text: hist.carregando ? 'Buscando…' : 'Atualizar o histórico', onclick: carregarHistorico }),
+      el('label', { class: 'imp-chave' }, chave, 'Mais recentes primeiro'),
+      el('button', { class: 'botao pequeno', type: 'button', id: 'ch-hist-imprimir', disabled: !total, text: 'Imprimir (em ordem de hora)', onclick: imprimirHistorico }),
+      el('span', { class: 'ch-m', text: hist.erro ? hist.erro : (hist.linhas ? total + (total === 1 ? ' registro' : ' registros') + ' · lido às ' + hist.em.slice(-5) + ' (não atualiza sozinho)' : '') })),
+    el('div', { class: 'ch-hist-folha' },
+      el('div', { class: 'lp-cab' }, el('strong', { text: 'Histórico da chamada dos classificáveis: ' + d.curso }), el('span', { text: doProcesso(estado.config) + ' · emitido em ' + (hist.em || hoje()) })),
+      total ? el('table', { class: 'ch-hist', id: 'ch-hist' },
+        el('thead', {}, el('tr', {}, ['Data e hora', 'Quem', 'Inscrição', 'Nome', 'Ação', 'Detalhe'].map(function (t) { return el('th', { scope: 'col', text: t }); }))),
+        el('tbody', {}, linhas.map(function (l) {
+          return el('tr', { 'data-acao': l.acao }, el('td', { text: l.em }), el('td', { text: l.quem }), el('td', { text: l.insc }), el('td', { text: nomeDe(l.insc) }), el('td', { text: l.acao }), el('td', { text: l.det }));
+        }))) : el('p', { class: 'ch-vazio', text: hist.carregando ? 'Buscando o histórico…' : (hist.erro ? '' : 'Nada registrado ainda para os classificáveis de ' + d.curso + '.') })));
+}
+function imprimirHistorico() {
+  hist.imprimindo = true;
+  desenharChamada();
+  document.body.classList.add('imprimindo-historico');
+  setTimeout(function () { window.print(); setTimeout(function () { hist.imprimindo = false; document.body.classList.remove('imprimindo-historico'); desenharChamada(); }, 400); }, 60);
+}
+
+/* ====================================================================== */
+/* 12. Balcão: a fila de quem foi confirmado na chamada, "Atender o        */
+/*     próximo", a trava na ficha e o painel só de leitura                  */
+/*     (planilha versão 11; quem escolhe o próximo é a planilha)           */
+/* ====================================================================== */
+function souEu(nome) { return Logica.chave(nome) === Logica.chave(estado.nome); }
+/** Confirmado na chamada, ainda não atendido: espera na fila do balcão. */
+function naFilaDoBalcao(v) {
+  const tipo = Logica.tipoSituacao(v.situacao);
+  return daChamada(v) && tipo !== 'fixa' && tipo !== 'concluida' && (!v.bc || v.bc.e === 'D');
+}
+/** A fila na ordem: os devolvidos primeiro (pela hora da devolução), depois pela hora da confirmação na chamada. */
+function filaDoBalcao(todos) {
+  return todos.filter(naFilaDoBalcao).sort(function (a, b) {
+    const da = !!(a.bc && a.bc.e === 'D'), db = !!(b.bc && b.bc.e === 'D');
+    return (da === db ? 0 : (da ? -1 : 1)) || ((da ? a.bc.t : a.ch.t) - (db ? b.bc.t : b.ch.t)) || a.nome.localeCompare(b.nome, 'pt-BR');
+  });
+}
+function balcaoOcupado() { return opsPendentes().some(function (o) { return o.acao === 'dia' && o.op !== 'presenca' && o.op !== 'chave'; }); }
+/** Antes de encerrar um atendimento sem nenhum documento marcado, pergunta: a pessoa sairia da fila sem nada registrado. */
+function podeEncerrar(lista, depois) {
+  const sem = lista.filter(function (v) { return Logica.tipoSituacao(v.situacao) !== 'fixa' && !Object.keys(Logica.marcados(v.docs)).length; });
+  return !sem.length || window.confirm('Nenhum documento foi marcado para ' + sem.map(function (v) { return v.nome; }).join(' e ') + '. Encerrar assim mesmo' + (depois || '') + '?');
+}
+function pedirProximo() {
+  if (balcaoOcupado()) return;
+  const meus = Object.keys(estado.candidatos).map(visao).filter(function (v) { return daChamada(v) && v.bc && v.bc.e === 'E' && souEu(v.bc.por); });
+  if (!podeEncerrar(meus, ' e atender o próximo')) return;
+  pedirDia({ op: 'proximo', depois: function (r) {
+    if (!r.ok) return;
+    if (r.insc) { if (!$('chamada').hidden) fecharChamada(); fecharBalcao(); abrir(r.insc); }
+    else avisar('Não há mais ninguém na fila do balcão.');
+  } });
+}
+
+/** Barra no alto da lista: quantos esperam, quem está com este atendente e o botão "Atender o próximo". */
+function desenharBarraDoBalcao() {
+  const barra = $('balcao-barra');
+  if (!temDia() || !temChamada()) { barra.hidden = true; return; }
+  const todos = Object.keys(estado.candidatos).map(visao);
+  const fila = filaDoBalcao(todos);
+  const meus = todos.filter(function (v) { return daChamada(v) && v.bc && v.bc.e === 'E' && souEu(v.bc.por); });
+  if (!fila.length && !meus.length) { barra.hidden = true; return; }
+  barra.hidden = false;
+  const ocupado = balcaoOcupado();
+  trocarFilhos(barra,
+    el('span', { class: 'bb-texto' }, el('b', { text: 'Balcão: ' }), fila.length ? (fila.length === 1 ? '1 pessoa na fila' : fila.length + ' pessoas na fila') : 'ninguém na fila',
+      meus.length ? [' · com você: ', meus.map(function (v) {
+        return el('button', { class: 'bb-meu', type: 'button', 'data-meu': v.insc, text: v.nome.split(' ').slice(0, 2).join(' '), title: 'Abrir a ficha', onclick: function () { abrir(v.insc); } });
+      })] : null),
+    el('button', { class: 'botao principal pequeno', type: 'button', id: 'balcao-proximo', 'data-foco': 'balcao-proximo', disabled: ocupado,
+      text: ocupado ? 'Aguarde…' : (meus.length ? (fila.length ? 'Encerrar e atender o próximo' : 'Encerrar o atendimento') : 'Atender o próximo'),
+      title: 'A planilha entrega a próxima pessoa da fila: dois atendentes nunca recebem a mesma', onclick: pedirProximo }));
+}
+
+/** Com a fila do balcão, a ficha de quem foi confirmado na chamada só é mexida por quem está atendendo a pessoa. */
+function fichaTravada(v, tipo) {
+  if (!temDia() || !daChamada(v) || tipo === 'fixa') return false;
+  if (v.bc && v.bc.e === 'E') return !souEu(v.bc.por);
+  if (v.bc && v.bc.e === 'T') return false;
+  return tipo !== 'concluida';
+}
+function elBalcaoNaFicha(v, insc, tipo) {
+  if (!temDia() || tipo === 'fixa') return null;
+  const bc = v.bc, ocupado = balcaoOcupado();
+  const botao = function (id, texto, fazer, principal) {
+    return el('button', { class: 'botao pequeno' + (principal ? ' principal' : ''), type: 'button', id: id, 'data-foco': id, disabled: ocupado, text: texto, onclick: function () { if (!balcaoOcupado()) fazer(); } });
+  };
+  if (bc && bc.e === 'E' && souEu(bc.por)) {
+    return el('p', { class: 'alerta fila-balcao', id: 'ficha-balcao', 'data-estado': 'meu' }, 'Balcão. ', el('span', { text: 'Em atendimento com você desde ' + soHora(bc.em) + '.' }),
+      el('span', { class: 'acoes' },
+        botao('fb-proximo', 'Encerrar e atender o próximo', pedirProximo, true),
+        botao('fb-encerrar', 'Encerrar', function () { if (podeEncerrar([v])) pedirDia({ op: 'concluir', insc: insc }); }),
+        botao('fb-devolver', 'Devolver à fila', function () { pedirDia({ op: 'devolver', insc: insc }); })));
+  }
+  if (bc && bc.e === 'E') {
+    return el('p', { class: 'alerta fila-balcao', id: 'ficha-balcao', 'data-estado': 'outro' }, 'Balcão. ', el('span', { text: 'Em atendimento com ' + bc.por + ' desde ' + soHora(bc.em) + '. Aqui, os documentos ficam travados.' }),
+      botao('fb-assumir', 'Assumir o atendimento', function () {
+        if (window.confirm('Assumir o atendimento de ' + v.nome + ', que está com ' + bc.por + '? Fica no Registro.')) pedirDia({ op: 'atender', insc: insc, assumir: true });
+      }));
+  }
+  if (bc && bc.e === 'T') {
+    return el('p', { class: 'alerta fila-balcao', id: 'ficha-balcao', 'data-estado': 'atendido' }, 'Balcão. ', el('span', { text: 'Atendido por ' + bc.por + ' às ' + soHora(bc.em) + '.' }));
+  }
+  if (tipo === 'concluida') return null;
+  const fila = filaDoBalcao(Object.keys(estado.candidatos).map(visao));
+  const pos = fila.map(function (x) { return x.insc; }).indexOf(insc) + 1;
+  return el('p', { class: 'alerta fila-balcao', id: 'ficha-balcao', 'data-estado': 'fila' }, 'Balcão. ',
+    el('span', { text: 'Na fila: ' + pos + 'º de ' + fila.length + (bc && bc.e === 'D' ? ' (devolvido à fila)' : '') + '. Os documentos ficam travados até o atendimento começar.' }),
+    botao('fb-atender', pos <= 1 ? 'Atender agora' : 'Atender fora da ordem…', function () {
+      let obs = '';
+      if (pos > 1) {
+        obs = window.prompt('Atender ' + v.nome + ' fora da ordem? Há ' + (pos - 1) + (pos === 2 ? ' pessoa' : ' pessoas') + ' na frente. Fica no Registro.\nObservação (opcional):', '');
+        if (obs === null) return;
+      }
+      pedirDia({ op: 'atender', insc: insc, obs: obs });
+    }, pos <= 1));
+}
+/** Desliga os controles da ficha travada (e religa os que ela mesma desligou, quando destrava). */
+function travarPeloBalcao(v, tipo) {
+  const travada = fichaTravada(v, tipo);
+  [pecas.blocoDocs, pecas.blocoSituacao, pecas.motivos, pecas.blocoBanca].forEach(function (bloco) {
+    if (!bloco) return;
+    bloco.classList.toggle('travado', travada);
+    Array.prototype.forEach.call(bloco.querySelectorAll('input, button, select, textarea'), function (x) {
+      if (travada) { if (!x.disabled) { x.disabled = true; x.setAttribute('data-travado', ''); } }
+      else if (x.hasAttribute('data-travado')) { x.disabled = false; x.removeAttribute('data-travado'); }
+    });
+  });
+}
+
+/** Os documentos que ainda faltam marcar para a pessoa (os da cota da vaga que ela ocupa). */
+function docsACobrar(v) {
+  return Logica.regrasDe(estado.config, v.docs).filter(function (r) { return !v.docs[r.codigo]; }).map(function (r) { return r.documento; }).join('; ');
+}
+
+/* ---------- painel do balcão: só leitura, para o computador que fica à vista da equipe */
+function abrirBalcao() {
+  if (!temDia()) { avisar('O balcão pede a planilha na versão 11, com o item 1 do menu já usado.'); return; }
+  $('balcao').hidden = false;
+  document.body.classList.add('com-chamada');
+  desenharBalcao();
+}
+function fecharBalcao() {
+  $('balcao').hidden = true;
+  if ($('chamada').hidden) document.body.classList.remove('com-chamada');
+}
+function desenharBalcao() {
+  desenharBarraDoBalcao();
+  const painel = $('balcao');
+  if (painel.hidden) return;
+  if (!temDia()) { fecharBalcao(); return; }
+  const todos = Object.keys(estado.candidatos).map(visao);
+  const fila = filaDoBalcao(todos);
+  const comBalcao = function (e) { return todos.filter(function (v) { return daChamada(v) && v.bc && v.bc.e === e; }); };
+  const atendendo = comBalcao('E').sort(function (a, b) { return a.bc.t - b.bc.t; });
+  const atendidos = comBalcao('T').sort(function (a, b) { return b.bc.t - a.bc.t; });
+  const d = new Date();
+  const vaga = function (v) { return v.curso + ' · ' + Regra.textoDaVaga(v.cota, v.ch.o); };
+  trocarFilhos(painel,
+    el('div', { class: 'ch-topo' }, el('h2', { text: 'Balcão' }),
+      el('span', { class: 'ch-gravacao', id: 'bl-hora', text: 'Atualizado às ' + doisDigitos(d.getHours()) + ':' + doisDigitos(d.getMinutes()) + ':' + doisDigitos(d.getSeconds()) + ' (sozinho, a cada poucos segundos)' }),
+      el('button', { class: 'botao pequeno', type: 'button', id: 'bl-fechar', text: 'Fechar', onclick: fecharBalcao })),
+    el('div', { class: 'bl-corpo' },
+      el('section', { class: 'ch-bloco', id: 'bl-proximos' }, el('h3', {}, 'Próximos', el('small', { text: fila.length ? fila.length + ' na fila' : '' })),
+        fila.length ? el('ol', { class: 'bl-lista' }, fila.map(function (v, i) {
+          return el('li', { 'data-insc': v.insc }, el('span', { class: 'bl-n', text: String(i + 1) }),
+            el('span', {}, el('span', { class: 'ch-n', text: v.nome }),
+              el('span', { class: 'ch-m', text: vaga(v) + ' · ' + (v.bc && v.bc.e === 'D' ? 'devolvido à fila às ' + soHora(v.bc.em) : 'confirmado às ' + soHora(v.ch.em)) }),
+              el('span', { class: 'bl-docs', text: 'Cobrar: ' + (docsACobrar(v) || 'nada pendente') })));
+        })) : el('p', { class: 'ch-vazio', text: 'Ninguém esperando.' })),
+      el('div', {},
+        el('section', { class: 'ch-bloco', id: 'bl-atendendo' }, el('h3', {}, 'Em atendimento', el('small', { text: atendendo.length ? String(atendendo.length) : '' })),
+          atendendo.length ? el('ul', { class: 'bl-lista' }, atendendo.map(function (v) {
+            return el('li', { 'data-insc': v.insc }, el('span', { class: 'bl-n', text: '' }),
+              el('span', {}, el('span', { class: 'ch-n', text: v.nome }), el('span', { class: 'ch-m', text: 'com ' + v.bc.por + ', desde ' + soHora(v.bc.em) + ' · ' + vaga(v) })));
+          })) : el('p', { class: 'ch-vazio', text: 'Ninguém em atendimento.' })),
+        el('section', { class: 'ch-bloco', id: 'bl-atendidos' }, el('h3', {}, 'Atendidos', el('small', { text: String(atendidos.length) })),
+          atendidos.length ? el('ul', { class: 'bl-lista' }, atendidos.slice(0, 3).map(function (v) {
+            return el('li', { 'data-insc': v.insc }, el('span', { class: 'bl-n', text: '' }),
+              el('span', {}, el('span', { class: 'ch-n', text: v.nome }), el('span', { class: 'ch-m', text: 'por ' + v.bc.por + ', às ' + soHora(v.bc.em) + (v.situacao ? ' · ' + v.situacao : '') })));
+          })) : el('p', { class: 'ch-vazio', text: 'Ninguém atendido ainda.' }),
+          atendidos.length > 3 ? el('p', { class: 'ch-vazio', text: 'e mais ' + (atendidos.length - 3) + ' antes.' }) : null))));
+}
 
 partida();
 })();
