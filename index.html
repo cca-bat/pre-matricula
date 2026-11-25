@@ -59,6 +59,7 @@
   .menu { position: absolute; right: 12px; top: calc(100% + 4px); background: var(--papel); color: var(--tinta); border: 1px solid var(--linha-forte); border-radius: 4px; box-shadow: 0 6px 18px rgba(23,35,28,.18); z-index: 40; min-width: 230px; padding: 4px; }
   .menu button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 10px 12px; border-radius: 3px; }
 
+  .credito-menu { margin: 0 12px 6px; font-size: 12px; color: var(--suave); }
   .versoes { margin: 4px 12px 6px; padding-top: 6px; border-top: 1px solid var(--linha); font-size: 12px; color: var(--suave); }
   .faixa { background: var(--vermelho); color: #fff; padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: none; font-weight: 600; }
   .faixa.branda { background: var(--ocre); }
@@ -185,6 +186,7 @@
   .entrada .campo small { display: block; font-size: 13px; color: var(--suave); margin-top: 3px; }
   .entrada .erro { color: var(--vermelho); font-weight: 600; margin: 14px 0 0; }
   .entrada .acoes { margin-top: 18px; }
+  .entrada .credito { max-width: 440px; margin: 10px auto 0; text-align: center; font-size: 12px; color: var(--suave); }
 
   /* ---------- avisos */
   .avisos { position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 70; display: flex; flex-direction: column; gap: 8px; width: min(560px, calc(100vw - 24px)); pointer-events: none; }
@@ -531,6 +533,7 @@
     <button type="button" data-acao="link">Copiar link para a equipe</button>
     <button type="button" data-acao="sair">Sair deste aparelho</button>
     <p id="versoes" class="versoes"></p>
+    <p class="credito-menu">Idealizado por Max Ramon — CCA / Campus Baturité</p>
   </div>
 </header>
 
@@ -581,6 +584,7 @@
       <button id="botao-outra" class="botao" type="button" hidden>Usar outra planilha</button>
     </div>
   </form>
+  <p class="credito">Idealizado por Max Ramon — CCA / Campus Baturité</p>
 </div>
 
 <div id="chamada" class="chamada" aria-label="Chamada dos classificáveis" hidden></div>
