@@ -9,7 +9,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https: http://localhost:* http://127.0.0.1:*; img-src data:; base-uri 'none'; form-action 'none'">
 <title>Pré-matrícula</title>
 <!--
-  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 8 (com a planilha na versão 11: para publicar, presença, balcão e histórico da chamada;
+  CONTROLE DE PRÉ-MATRÍCULA: TELA DE ATENDIMENTO - versão 9 (com a planilha na versão 11 ou 12: para publicar, presença, balcão e histórico da chamada;
+  na versão 9, as tiras do checklist podem sair só dos aprovados ou só de quem ficou com vaga pela chamada dos classificáveis;
   para o controle_base.gs versão 4 ou mais nova;
   a impressão das tiras do checklist só aparece com a planilha na versão 8, e a chamada dos classificáveis, na versão 10)
 
@@ -273,6 +274,8 @@
   .imp-linha input[type="search"] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 180px; max-width: 320px; padding: 8px 10px; border: 1.5px solid var(--linha-forte); border-radius: 4px; background: #fff; font-size: 16px; }
   .imp-linha input[type="number"] { width: 78px; padding: 7px 8px; border: 1.5px solid var(--linha-forte); border-radius: 4px; background: #fff; font-size: 16px; }
   .imp-chave, .imp-cota { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  .imp-secao { gap: 8px; }
+  .imp-secao > span { font-weight: 600; }
   .imp-chave input, .imp-pessoa input { width: 20px; height: 20px; margin: 0; flex: none; }
   .imp-grupo { margin: 10px 0 4px; font-weight: 650; font-size: 14px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
   .imp-grupo button { background: none; border: 0; color: var(--foco); padding: 0; font-size: 13px; font-weight: 400; text-decoration: underline; }
@@ -904,7 +907,7 @@ const ATRASO_CLIQUE = 350;        // junta cliques seguidos na mesma pessoa numa
 const ATRASO_TEXTO = 1500;        // espera a pessoa parar de digitar
 const LIMITE = 30000;             // desiste de um pedido sem resposta
 const GUARDADO = 'prematricula:aparelho';
-const VERSAO_DA_TELA = 8;
+const VERSAO_DA_TELA = 9;
 const ROTULO_COTA = {
   AC: 'ampla concorrência',
   LB_PPI: 'baixa renda, pretos, pardos e indígenas', LB_Q: 'baixa renda, quilombolas', LB_PCD: 'baixa renda, pessoas com deficiência', LB_EP: 'baixa renda, escola pública',
@@ -1813,7 +1816,9 @@ function carregarInicio() {
 /* ====================================================================== */
 const MODOS = [['tiras', 'Tiras do checklist'], ['pendencias', 'Lista de pendências'], ['lembretes', 'Lembretes em branco'], ['brancas', 'Tiras em branco'], ['balanco', 'Balanço de vagas'], ['publicar', 'Para publicar']];
 const GRUPOS_DE_TIRAS = [['nova', 'Novas'], ['mudou', 'Mudaram desde a última impressão'], ['igual', 'Já impressas'], ['indeferida', 'Indeferidas (só entram se você marcar)']];
-const imp = { modo: 'tiras', escolhidos: {}, pendencias: false, filtro: '', impressos: null, enviando: false, erro: '', lembretes: 6, brancas: null };
+/** De quem são as tiras: todos, só os aprovados, ou só quem ficou com vaga pela chamada dos classificáveis. */
+const SECOES_DE_TIRAS = [['todos', 'Todos'], ['aprovados', 'Aprovados'], ['chamada', 'Chamada dos classificáveis']];
+const imp = { modo: 'tiras', quem: 'todos', escolhidos: {}, pendencias: false, filtro: '', impressos: null, enviando: false, erro: '', lembretes: 6, brancas: null };
 const impPecas = {};
 
 function minuscula(t) { return t.length > 1 && t.charAt(1) === t.charAt(1).toLowerCase() ? t.charAt(0).toLowerCase() + t.slice(1) : t; }
@@ -2151,6 +2156,19 @@ function paraTiras() {
     return tipo === 'concluida' || tipo === 'pendencia' || Logica.classeDaSituacao(v.situacao) === 'sit-indeferida';
   }).sort(porCursoENome(estado.config));
 }
+/**
+ * Seção da tira. "chamada": quem ficou com vaga pela chamada dos classificáveis ("Presente"), inclusive o aprovado que
+ * voltou pela chamada (ação excepcional) e o classificável atendido direto na planilha; "aprovados": os demais.
+ */
+function secaoDaTira(v) { return daChamada(v) || v.lista !== estado.config.aprovado ? 'chamada' : 'aprovados'; }
+/** As tiras da seção escolhida no painel. É delas a lista, a contagem, a prévia e o que vai para o papel. */
+function tirasDaSecao() { return naSecao(paraTiras()); }
+function naSecao(todas) {
+  if (!temSecoes(todas)) imp.quem = 'todos';
+  return imp.quem === 'todos' ? todas : todas.filter(function (v) { return secaoDaTira(v) === imp.quem; });
+}
+/** O seletor só aparece quando a planilha tem a chamada dos classificáveis, ou quando já há tira de classificável. */
+function temSecoes(todas) { return temChamada() || todas.some(function (v) { return secaoDaTira(v) === 'chamada'; }); }
 /** "nova": nunca impressa; "mudou": os documentos mudaram desde a impressão; "igual": a tira da pasta está em dia. */
 function grupoDaTira(v) {
   if (Logica.tipoSituacao(v.situacao) === 'fixa') return 'indeferida';
@@ -2187,6 +2205,7 @@ function abrirImpressao(modo) {
       el('div', { class: 'previa' }, el('p', { text: 'Prévia. A divisão em páginas aparece na janela de impressão. Nela, desmarque "cabeçalhos e rodapés" (no Firefox, em "Mais configurações"), para o endereço do site não sair no papel.' }), el('div', { id: 'folhas' })));
   }
   imp.escolhidos = {};
+  imp.quem = 'todos';                                  // o painel sempre abre com as tiras de todos
   painel.hidden = false;
   document.body.classList.add('imprimindo');
   montarOpcoes();
@@ -2214,6 +2233,7 @@ function montarOpcoes() {
   impPecas.avisosPub = null;
   impPecas.botao = el('button', { class: 'botao principal', type: 'button', id: 'imp-botao', onclick: imprimirAgora });
   impPecas.lista = null;
+  impPecas.secao = null;
   imp.filtro = '';
   let partes;
   if (imp.modo === 'tiras') {
@@ -2222,7 +2242,9 @@ function montarOpcoes() {
     const chave = el('input', { type: 'checkbox', id: 'imp-pendencias', checked: imp.pendencias });
     chave.addEventListener('change', function () { imp.pendencias = chave.checked; imp.escolhidos = {}; guardar(); desenharImpressao(); });
     impPecas.lista = el('div', {});
+    impPecas.secao = el('div', { class: 'imp-linha imp-secao', id: 'imp-secao', role: 'group', 'aria-label': 'De quem são as tiras' });
     partes = [el('p', { text: 'As tiras novas e as que mudaram desde a última impressão já vêm marcadas. Saem por curso e nome, com a data da última marcação de documento.' }),
+      impPecas.secao,
       el('div', { class: 'imp-linha' }, el('label', { class: 'imp-chave' }, chave, 'Incluir quem está com pendência (tira parcial)'), filtro),
       impPecas.lista, el('div', { class: 'imp-linha folga' }, impPecas.botao)];
   } else if (imp.modo === 'pendencias') {
@@ -2256,7 +2278,7 @@ function montarOpcoes() {
 
 function contarTiras() {
   if (imp.modo !== 'tiras') return;
-  const n = paraTiras().filter(function (v) { return imp.escolhidos[v.insc]; }).length;
+  const n = tirasDaSecao().filter(function (v) { return imp.escolhidos[v.insc]; }).length;
   impPecas.botao.textContent = n === 1 ? 'Imprimir 1 tira' : 'Imprimir ' + n + ' tiras';
   impPecas.botao.disabled = !n;
 }
@@ -2270,8 +2292,22 @@ function desenharImpressao() {
     el('button', { class: 'botao pequeno', type: 'button', id: 'imp-nao', disabled: imp.enviando, text: 'Não saíram', onclick: function () { imp.impressos = null; imp.erro = ''; desenharImpressao(); } })) : null);
 
   if (imp.modo === 'tiras' && impPecas.lista) {
-    const todos = paraTiras();
-    todos.forEach(function (v) { if (!(v.insc in imp.escolhidos)) imp.escolhidos[v.insc] = vemMarcada(v); });
+    const tudo = paraTiras();
+    tudo.forEach(function (v) { if (!(v.insc in imp.escolhidos)) imp.escolhidos[v.insc] = vemMarcada(v); });
+    const todos = naSecao(tudo);
+    // seletor da seção, com quantas pessoas têm tira em cada uma; as marcações de cada pessoa valem em todas as seções
+    const comSecoes = temSecoes(tudo);
+    impPecas.secao.hidden = !comSecoes;
+    trocarFilhos(impPecas.secao, comSecoes ? [el('span', { text: 'Tiras de:' })].concat(SECOES_DE_TIRAS.map(function (s) {
+      const n = s[0] === 'todos' ? tudo.length : tudo.filter(function (v) { return secaoDaTira(v) === s[0]; }).length;
+      return el('button', { class: 'botao pequeno', type: 'button', 'aria-pressed': imp.quem === s[0] ? 'true' : 'false', 'data-secao': s[0], 'data-foco': 'imp-secao:' + s[0], text: s[1] + ' (' + n + ')',
+        onclick: function () {
+          if (imp.quem === s[0]) return;
+          imp.quem = s[0];
+          desenharImpressao();
+          Array.prototype.forEach.call(impPecas.lista.querySelectorAll('.imp-pessoas'), function (x) { x.scrollTop = 0; });
+        } });
+    })) : null);
     const termo = Logica.semAcento(imp.filtro);
     const rolagens = {};
     Array.prototype.forEach.call(impPecas.lista.querySelectorAll('.imp-pessoas'), function (x) { rolagens[x.getAttribute('data-grupo')] = x.scrollTop; });
@@ -2291,7 +2327,9 @@ function desenharImpressao() {
           el('span', { class: 'selo ' + Logica.classeDaSituacao(v.situacao), text: v.situacao }));
       })));
     });
-    if (!blocos.length) blocos.push(el('p', { text: todos.length ? 'Ninguém com esse nome entre os atendidos.' : 'Ainda não há ninguém atendido para imprimir.' }));
+    const vazio = imp.quem === 'chamada' ? 'Ainda não há tira de quem ficou com vaga pela chamada dos classificáveis.' :
+      (imp.quem === 'aprovados' ? 'Ainda não há tira de aprovado para imprimir.' : 'Ainda não há ninguém atendido para imprimir.');
+    if (!blocos.length) blocos.push(el('p', { text: todos.length ? 'Ninguém com esse nome ' + (imp.quem === 'todos' ? 'entre os atendidos.' : 'nesta seção.') : vazio }));
     trocarFilhos(impPecas.lista, blocos);
     Array.prototype.forEach.call(impPecas.lista.querySelectorAll('.imp-pessoas'), function (x) { const y = rolagens[x.getAttribute('data-grupo')]; if (y) x.scrollTop = y; });
     contarTiras();
@@ -2305,7 +2343,7 @@ function montarFolhas() {
   if (!folhas || !cfg) return;
   let conteudo;
   if (imp.modo === 'tiras') {
-    const lote = paraTiras().filter(function (v) { return imp.escolhidos[v.insc]; });
+    const lote = tirasDaSecao().filter(function (v) { return imp.escolhidos[v.insc]; });
     conteudo = lote.length ? emPares(lote.map(function (v) { return elTira(cfg, v.cota, v.curso, v.nome, v.docsEm || '', linhasDaTira(cfg, v)); })) : [el('p', { text: 'Nenhuma tira marcada.' })];
   } else if (imp.modo === 'pendencias') {
     conteudo = folhaDePendencias(cfg);
@@ -2331,7 +2369,7 @@ function montarFolhas() {
 function imprimirAgora() {
   if (temPendencia()) { avisar('Espere as marcações serem salvas ("Tudo salvo") antes de imprimir.'); return; }
   if (imp.modo === 'tiras') {
-    const lote = paraTiras().filter(function (v) { return imp.escolhidos[v.insc]; });
+    const lote = tirasDaSecao().filter(function (v) { return imp.escolhidos[v.insc]; });
     if (!lote.length) { avisar('Marque pelo menos uma tira.'); return; }
     // guarda o que cada tira mostra agora: é isso que a planilha vai registrar como impresso
     imp.impressos = lote.map(function (v) { return { insc: v.insc, sinal: estado.candidatos[v.insc].sinal }; });
